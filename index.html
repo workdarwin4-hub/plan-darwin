@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Plan - نظام توزيع الفروع الاحترافي</title>
+    <title>Market Plan</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            --primary: #1e293b;
+            --primary: #0f172a;
             --secondary: #3b82f6;
             --accent: #10b981;
+            --pink: #ec4899;
             --danger: #ef4444;
-            --warning: #f59e0b;
-            --bg: #0f172a;
-            --card-bg: #1e293b;
-            --border: #334155;
-            --text: #f8fafc;
-            --text-muted: #94a3b8;
+            --bg: #090d16;
+            --card-bg: #111827;
+            --border: #1f2937;
+            --text: #f9fafb;
+            --text-muted: #9ca3af;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
         body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
@@ -28,22 +28,23 @@
             display: flex; justify-content: center; align-items: center; padding: 20px;
         }
         .login-card {
-            background: var(--card-bg); border: 1px solid var(--border); padding: 40px; border-radius: 16px;
-            width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+            background: var(--card-bg); border: 1px solid var(--border); padding: 40px; border-radius: 20px;
+            width: 100%; max-width: 400px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);
         }
-        .login-card h1 { font-size: 24px; margin-bottom: 8px; color: var(--secondary); font-weight: 900; }
+        .login-card h1 { font-size: 26px; margin-bottom: 8px; color: var(--pink); font-weight: 900; }
         .login-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
         .login-input {
-            width: 100%; padding: 12px 16px; background: #0f172a; border: 1px solid var(--border);
-            border-radius: 8px; color: white; font-size: 18px; text-align: center; letter-spacing: 4px; margin-bottom: 16px;
+            width: 100%; padding: 12px 16px; background: #030712; border: 1px solid var(--border);
+            border-radius: 10px; color: white; font-size: 20px; text-align: center; letter-spacing: 6px; margin-bottom: 16px;
         }
         .btn {
-            background: var(--secondary); color: white; border: none; padding: 12px 24px; border-radius: 8px;
-            font-size: 16px; font-weight: 700; cursor: pointer; transition: 0.2s; width: 100%;
+            background: linear-gradient(135deg, var(--secondary), #2563eb); color: white; border: none; padding: 12px 24px; border-radius: 10px;
+            font-size: 16px; font-weight: 700; cursor: pointer; transition: 0.2s; width: 100%; box-shadow: 0 4px 12px rgba(59,130,246,0.3);
         }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-danger { background: var(--danger); }
-        .btn-success { background: var(--accent); }
+        .btn:hover { opacity: 0.95; transform: translateY(-2px); }
+        .btn-pink { background: linear-gradient(135deg, var(--pink), #db2777); box-shadow: 0 4px 12px rgba(236,72,153,0.3); }
+        .btn-danger { background: var(--danger); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+        .btn-success { background: var(--accent); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
 
         /* App Container */
         #app-container { display: none; flex-direction: column; min-height: 100vh; }
@@ -52,11 +53,11 @@
             display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100;
         }
         .logo-area { display: flex; align-items: center; gap: 12px; }
-        .logo-area h2 { font-size: 22px; font-weight: 900; color: var(--secondary); }
-        .nav-tabs { display: flex; gap: 8px; }
+        .logo-area h2 { font-size: 24px; font-weight: 900; background: linear-gradient(135deg, #3b82f6, var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
         .tab-btn {
             background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 8px 16px;
-            border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;
+            border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s;
         }
         .tab-btn.active, .tab-btn:hover { background: var(--secondary); color: white; border-color: var(--secondary); }
 
@@ -64,47 +65,74 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Dashboard & Stats */
+        /* Stats Grid */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 24px; }
-        .stat-card { background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 12px; }
+        .stat-card { background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
         .stat-card h4 { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
-        .stat-card .val { font-size: 24px; font-weight: 900; color: var(--secondary); }
+        .stat-card .val { font-size: 26px; font-weight: 900; color: var(--pink); }
 
         /* Toolbar */
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
         .search-box {
-            background: var(--card-bg); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px;
-            display: flex; align-items: center; gap: 8px; width: 300px;
+            background: var(--card-bg); border: 1px solid var(--border); padding: 8px 16px; border-radius: 10px;
+            display: flex; align-items: center; gap: 8px; width: 320px;
         }
         .search-box input { background: transparent; border: none; color: white; outline: none; width: 100%; font-size: 14px; }
 
-        /* Table Design */
-        .table-responsive { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+        /* Section Layouts */
+        .section-title { font-size: 18px; font-weight: 800; color: var(--pink); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        
+        /* Support Section Cards Grid */
+        .supports-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .support-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+        .support-box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .support-items-list { display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; padding-left: 4px; }
+        .support-item-row { display: flex; gap: 8px; align-items: center; }
+
+        /* Tables */
+        .table-responsive { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
         table { width: 100%; border-collapse: collapse; text-align: right; }
-        th, td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; }
-        th { background: #111827; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 12px; }
-        tr:hover { background: rgba(255,255,255,0.02); }
+        th, td { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { background: #030712; color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+        tr:hover { background: rgba(255,255,255,0.015); }
         
         select, input[type="text"] {
-            width: 100%; background: #0f172a; border: 1px solid var(--border); color: white; padding: 8px 12px;
-            border-radius: 6px; font-size: 14px; outline: none;
+            width: 100%; background: #030712; border: 1px solid var(--border); color: white; padding: 10px 14px;
+            border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s;
         }
-        select:focus, input:focus { border-color: var(--secondary); }
+        select:focus, input:focus { border-color: var(--pink); box-shadow: 0 0 0 2px rgba(236,72,153,0.2); }
 
         .conflict { background: rgba(239, 68, 68, 0.15) !important; border: 1px solid var(--danger); }
-        .history-badge { font-size: 11px; background: #334155; color: #cbd5e1; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+        .history-badge { font-size: 11px; background: #1f2937; color: #cbd5e1; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-top: 6px; }
 
-        /* Database Form */
+        /* Database & Branch management grid */
         .db-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
-        .form-card { background: var(--card-bg); border: 1px solid var(--border); padding: 24px; border-radius: 12px; height: fit-content; }
+        .form-card { background: var(--card-bg); border: 1px solid var(--border); padding: 24px; border-radius: 14px; height: fit-content; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); }
 
-        /* Export Snapshot Area */
-        #export-area { background: var(--card-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border); }
-        .export-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 15px; }
-        .export-header h2 { font-size: 22px; color: var(--secondary); font-weight: 900; }
-        .export-header p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+        /* Clean Snapshot Export Area (WhatsApp Friendly & Professional) */
+        #export-area { 
+            background: #ffffff; color: #111827; padding: 32px; border-radius: 16px; font-family: 'Cairo', sans-serif;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+        .export-header { text-align: center; margin-bottom: 24px; border-bottom: 3px solid #f3f4f6; padding-bottom: 16px; }
+        .export-header h2 { font-size: 26px; color: #1e293b; font-weight: 900; margin-bottom: 4px; }
+        .export-header p { color: #64748b; font-size: 14px; font-weight: 600; }
+        
+        .export-table { width: 100%; border-collapse: collapse; margin-top: 16px; text-align: right; }
+        .export-table th { background: #1e293b; color: #ffffff; padding: 12px 14px; font-size: 13px; border: 1px solid #cbd5e1; }
+        .export-table td { padding: 10px 14px; border: 1px solid #e2e8f0; font-size: 13px; color: #334155; font-weight: 600; }
+        .export-table tr:nth-child(even) { background: #f8fafc; }
+        
+        .export-supports-section { margin-top: 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .export-support-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; }
+        .export-support-card h4 { font-size: 14px; color: #1e293b; margin-bottom: 8px; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px; font-weight: 800; }
+        .export-support-card ul { padding-right: 18px; font-size: 13px; color: #475569; }
+
+        @media(max-width: 768px) {
+            .db-grid, .supports-grid, .export-supports-section { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -113,9 +141,9 @@
     <div id="login-screen">
         <div class="login-card">
             <h1>Market Plan</h1>
-            <p>أدخل كلمة المرور للمتابعة إلى النظام</p>
+            <p>أدخل كلمة المرور للمتابعة</p>
             <input type="password" id="pass-input" class="login-input" placeholder="•••••">
-            <button class="btn" onclick="checkLogin()">دخول للنظام</button>
+            <button class="btn btn-pink" onclick="checkLogin()">دخول للنظام</button>
             <p id="login-err" style="color: var(--danger); margin-top: 12px; font-size: 13px; display: none;">كلمة المرور غير صحيحة</p>
         </div>
     </div>
@@ -125,23 +153,24 @@
         <header>
             <div class="logo-area">
                 <h2>Market Plan</h2>
-                <span style="font-size: 12px; background: #334155; padding: 2px 8px; border-radius: 4px;">الإصدار الاحترافي</span>
+                <span style="font-size: 12px; background: rgba(236,72,153,0.15); color: var(--pink); border: 1px solid rgba(236,72,153,0.3); padding: 2px 10px; border-radius: 6px; font-weight: 700;">النسخة الاحترافية</span>
             </div>
             <div class="nav-tabs">
-                <button class="tab-btn active" onclick="switchTab('allocation', this)">توزيع الفروع</button>
+                <button class="tab-btn active" onclick="switchTab('allocation', this)">توزيع الفروع والسبورتات</button>
                 <button class="tab-btn" onclick="switchTab('database', this)">إدارة الداتا بيز</button>
+                <button class="tab-btn" onclick="switchTab('branches', this)">إدارة الفروع</button>
                 <button class="tab-btn" onclick="switchTab('records', this)">السجلات اليومية</button>
                 <button class="tab-btn btn-danger" style="color: white;" onclick="location.reload()">خروج</button>
             </div>
         </header>
 
         <main>
-            <!-- TAB 1: ALLOCATION -->
+            <!-- TAB 1: ALLOCATION & SUPPORTS -->
             <div id="tab-allocation" class="tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <h4>إجمالي الفروع</h4>
-                        <div class="val" id="stat-total">21</div>
+                        <h4>إجمالي الفروع النشطة</h4>
+                        <div class="val" id="stat-total" style="color: var(--secondary);">0</div>
                     </div>
                     <div class="stat-card">
                         <h4>الفروع بمندوب</h4>
@@ -149,7 +178,7 @@
                     </div>
                     <div class="stat-card">
                         <h4>تنبيهات التكرار</h4>
-                        <div class="val" id="stat-conflicts" style="color: var(--danger);">0</div>
+                        <div class="val" id="stat-conflicts">0</div>
                     </div>
                 </div>
 
@@ -158,52 +187,122 @@
                         <span>🔍</span>
                         <input type="text" id="search-input" placeholder="بحث باسم المندوب أو الـ HR ID..." oninput="filterBranches()">
                     </div>
-                    <div style="display: flex; gap: 12px;">
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <button class="btn btn-success" onclick="saveDailyRecord()">💾 حفظ توزيعه اليوم</button>
-                        <button class="btn" onclick="exportImage()">📸 تصدير كصورة للجروب</button>
+                        <button class="btn btn-pink" onclick="exportImage()">📸 تصدير كصورة للجروب</button>
                     </div>
                 </div>
 
-                <!-- Snapshot export target -->
-                <div id="export-area">
-                    <div class="export-header">
-                        <h2>توزيعة فروع Market Plan </h2>
-                        <p id="current-date-str">التاريخ: ---</p>
+                <!-- SUPPORTS MANAGEMENT SECTION (Dedicated up to 10+ supports) -->
+                <div style="margin-bottom: 32px;">
+                    <div class="section-title">🍫 توزيع السبورتات اليومي </div>
+                    <div class="supports-grid">
+                        <!-- Snacks Support -->
+                        <div class="support-box">
+                            <div class="support-box-header">
+                                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 800;">🍿 سبورت سناكس (Snacks)</h4>
+                                <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('snacks')">+ إضافة سبورت</button>
+                            </div>
+                            <div class="support-items-list" id="snacks-list-container">
+                                <!-- Dynamic rows -->
+                            </div>
+                        </div>
+
+                        <!-- Chocolate Support -->
+                        <div class="support-box">
+                            <div class="support-box-header">
+                                <h4 style="color: var(--pink); font-size: 15px; font-weight: 800;">🍫 سبورت شوكلت (Chocolate)</h4>
+                                <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('chocolate')">+ إضافة سبورت</button>
+                            </div>
+                            <div class="support-items-list" id="chocolate-list-container">
+                                <!-- Dynamic rows -->
+                            </div>
+                        </div>
+
+                        <!-- Ambient / Outside Fridge Support -->
+                        <div class="support-box">
+                            <div class="support-box-header">
+                                <h4 style="color: var(--secondary); font-size: 15px; font-weight: 800;">🧊 سبورت برة الثلاجة (Ambient)</h4>
+                                <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('ambient')">+ إضافة سبورت</button>
+                            </div>
+                            <div class="support-items-list" id="ambient-list-container">
+                                <!-- Dynamic rows -->
+                            </div>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table>
+                </div>
+
+                <!-- BRANCHES ALLOCATION TABLE -->
+                <div class="section-title">📍 توزيع المناديب على الفروع الأساسية</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>اسم الفرع</th>
+                                <th>المندوب الأساسي</th>
+                            </tr>
+                        </thead>
+                        <tbody id="branches-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- HIDDEN CLEAN EXPORT SNAPSHOT CONTAINER (WhatsApp Optimized) -->
+                <div style="position: absolute; left: -9999px; top: -9999px;">
+                    <div id="export-area">
+                        <div class="export-header">
+                            <h2>Market Plan - خطة توزيع الفروع والسبورتات</h2>
+                            <p id="export-date-str">التاريخ: ---</p>
+                        </div>
+                        
+                        <h3 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 توزيع المناديب على الفروع</h3>
+                        <table class="export-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;">#</th>
+                                    <th style="width: 40px;">#</th>
                                     <th>اسم الفرع</th>
-                                    <th>المندوب الأساسي</th>
-                                    <th>سبورت سناكس (Snacks)</th>
-                                    <th>سبورت شوكلت (Chocolate)</th>
-                                    <th>سبورت برة الثلاجة (Ambient)</th>
+                                    <th>المندوب المسؤول</th>
                                 </tr>
                             </thead>
-                            <tbody id="branches-tbody">
-                                <!-- Populated dynamically -->
+                            <tbody id="export-branches-tbody">
+                                <!-- Snapshot rows -->
                             </tbody>
                         </table>
+
+                        <div class="export-supports-section">
+                            <div class="export-support-card">
+                                <h4>🍿 سبورت سناكس</h4>
+                                <ul id="export-snacks-ul"></ul>
+                            </div>
+                            <div class="export-support-card">
+                                <h4>🍫 سبورت شوكلت</h4>
+                                <ul id="export-chocolate-ul"></ul>
+                            </div>
+                            <div class="export-support-card">
+                                <h4>🧊 برة الثلاجة</h4>
+                                <ul id="export-ambient-ul"></ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 2: DATABASE -->
+            <!-- TAB 2: DATABASE MANAGEMENT -->
             <div id="tab-database" class="tab-content">
                 <div class="db-grid">
                     <div class="form-card">
-                        <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--secondary);">إضافة فرد جديد للداتا بيز</h3>
+                        <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--pink);">إضافة فرد جديد للداتا بيز</h3>
                         <div class="form-group">
-                            <label>اسم المندوب / الدعم</label>
-                            <input type="text" id="new-name" placeholder="مثال: أحمد محمد">
+                            <label>اسم المندوب</label>
+                            <input type="text" id="new-name" placeholder="مثال:ziad darwin ">
                         </div>
                         <div class="form-group">
                             <label>رقم الـ HR ID</label>
                             <input type="text" id="new-hr" placeholder="مثال: HR1024">
                         </div>
-                        <button class="btn btn-success" onclick="addTeamMember()">إضافة للقائمة</button>
+                        <button class="btn btn-pink" onclick="addTeamMember()">إضافة للقائمة</button>
                     </div>
 
                     <div class="table-responsive">
@@ -224,9 +323,38 @@
                 </div>
             </div>
 
-            <!-- TAB 3: RECORDS -->
+            <!-- TAB 3: BRANCHES MANAGEMENT (Add / Remove Branches) -->
+            <div id="tab-branches" class="tab-content">
+                <div class="db-grid">
+                    <div class="form-card">
+                        <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--secondary);">إضافة فرع جديد للقائمة</h3>
+                        <div class="form-group">
+                            <label>اسم الفرع (مثل: Maadi #3)</label>
+                            <input type="text" id="new-branch-name" placeholder="أدخل اسم الفرع الجديد...">
+                        </div>
+                        <button class="btn btn-success" onclick="addNewBranch()">إضافة الفرع</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>اسم الفرع</th>
+                                    <th style="width: 100px;">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="branches-mgmt-tbody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: RECORDS ARCHIVE -->
             <div id="tab-records" class="tab-content">
-                <h3 style="margin-bottom: 20px; font-size: 18px; color: var(--secondary);">سجلات التوزيعات السابقة (مفهرسة باليوم والتاريخ)</h3>
+                <h3 style="margin-bottom: 20px; font-size: 18px; color: var(--pink);">سجلات التوزيعات اليومية السابقة (محفوظة باليوم والتاريخ)</h3>
                 <div id="records-container" style="display: flex; flex-direction: column; gap: 16px;">
                     <!-- Populated dynamically -->
                 </div>
@@ -235,7 +363,7 @@
     </div>
 
     <script>
-        const branchesList = [
+        let branchesList = JSON.parse(localStorage.getItem('mp_branches')) || [
             "October 2", "Zayed #2", "Garden #1", "Zayed #4", "Obour #2", 
             "October #3", "Shorouk #3", "Shobra #1", "El zaher #1", "Hadayek Elahram", 
             "October #4", "New Cairo #1", "New Cairo #5", "Agouza #1", "Obour #1", 
@@ -256,6 +384,7 @@
         ];
 
         let allocations = JSON.parse(localStorage.getItem('mp_allocations')) || {};
+        let supportsAllocation = JSON.parse(localStorage.getItem('mp_supports')) || { snacks: [], chocolate: [], ambient: [] };
         let dailyRecords = JSON.parse(localStorage.getItem('mp_records')) || [];
 
         function checkLogin() {
@@ -275,15 +404,19 @@
             document.getElementById('tab-' + tabId).classList.add('active');
             if(btn) btn.classList.add('active');
             if(tabId === 'records') renderRecords();
+            if(tabId === 'branches') renderBranchesManagement();
         }
 
         function initApp() {
             const todayStr = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            document.getElementById('current-date-str').innerText = "تاريخ اليوم: " + todayStr;
+            document.getElementById('export-date-str').innerText = "تاريخ اليوم: " + todayStr;
             renderDatabase();
+            renderBranchesManagement();
+            renderSupportsUI();
             renderBranches();
         }
 
+        /* DATABASE MANAGEMENT */
         function renderDatabase() {
             const tbody = document.getElementById('db-tbody');
             tbody.innerHTML = '';
@@ -292,8 +425,8 @@
                     <tr>
                         <td>${index + 1}</td>
                         <td><strong>${member.name}</strong></td>
-                        <td><span style="background: #0f172a; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${member.hr}</span></td>
-                        <td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteMember(${index})">حذف</button></td>
+                        <td><span style="background: #030712; padding: 2px 8px; border-radius: 6px; font-family: monospace; color: var(--pink);">${member.hr}</span></td>
+                        <td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; width: auto;" onclick="deleteMember(${index})">حذف</button></td>
                     </tr>
                 `;
             });
@@ -311,94 +444,166 @@
             document.getElementById('new-name').value = '';
             document.getElementById('new-hr').value = '';
             renderDatabase();
+            renderSupportsUI();
             renderBranches();
         }
 
         function deleteMember(index) {
             teamMembers.splice(index, 1);
             renderDatabase();
+            renderSupportsUI();
             renderBranches();
         }
 
+        /* BRANCHES MANAGEMENT */
+        function renderBranchesManagement() {
+            const tbody = document.getElementById('branches-mgmt-tbody');
+            tbody.innerHTML = '';
+            branchesList.forEach((branch, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${branch}</strong></td>
+                        <td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; width: auto;" onclick="deleteBranch(${index})">حذف</button></td>
+                    </tr>
+                `;
+            });
+            localStorage.setItem('mp_branches', JSON.stringify(branchesList));
+        }
+
+        function addNewBranch() {
+            const name = document.getElementById('new-branch-name').value.trim();
+            if(!name) {
+                alert('برجاء إدخال اسم الفرع');
+                return;
+            }
+            branchesList.push(name);
+            document.getElementById('new-branch-name').value = '';
+            renderBranchesManagement();
+            renderBranches();
+        }
+
+        function deleteBranch(index) {
+            const bName = branchesList[index];
+            branchesList.splice(index, 1);
+            delete allocations[bName];
+            renderBranchesManagement();
+            renderBranches();
+        }
+
+        /* SUPPORTS UI (Supports up to 10+ supports per category) */
+        function addSupportItem(category) {
+            if(!supportsAllocation[category]) supportsAllocation[category] = [];
+            supportsAllocation[category].push("");
+            renderSupportsUI();
+        }
+
+        function updateSupportItem(category, index, val) {
+            supportsAllocation[category][index] = val;
+            localStorage.setItem('mp_supports', JSON.stringify(supportsAllocation));
+        }
+
+        function removeSupportItem(category, index) {
+            supportsAllocation[category].splice(index, 1);
+            renderSupportsUI();
+        }
+
+        function renderSupportsUI() {
+            ['snacks', 'chocolate', 'ambient'].forEach(cat => {
+                const container = document.getElementById(`${cat}-list-container`);
+                container.innerHTML = '';
+                const list = supportsAllocation[cat] || [];
+                
+                if(list.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">لا توجد عناصر مضافة بعد. اضغط على إضافة سبورت.</p>';
+                    return;
+                }
+
+                list.forEach((personName, idx) => {
+                    let optionsHTML = '<option value="">-- اختر --</option>';
+                    teamMembers.forEach(m => {
+                        const sel = (m.name === personName) ? 'selected' : '';
+                        optionsHTML += `<option value="${m.name}" ${sel}>${m.name} (${m.hr})</option>`;
+                    });
+
+                    const yesterdayInfo = getYesterdayAssignment(personName);
+
+                    container.innerHTML += `
+                        <div class="support-item-row">
+                            <div style="flex: 1;">
+                                <select onchange="updateSupportItem('${cat}', ${idx}, this.value)">
+                                    ${optionsHTML}
+                                </select>
+                                <div class="history-badge">أمس: ${yesterdayInfo}</div>
+                            </div>
+                            <button class="btn btn-danger" style="padding: 8px 12px; font-size: 12px; width: auto;" onclick="removeSupportItem('${cat}', ${idx})">✕</button>
+                        </div>
+                    `;
+                });
+            });
+            localStorage.setItem('mp_supports', JSON.stringify(supportsAllocation));
+        }
+
+        /* YESTERDAY HISTORY CHECKER */
         function getYesterdayAssignment(personName) {
-            if(!personName) return "غير مسجل أمس";
+            if(!personName) return "متاح";
             const yesterdayDate = new Date();
             yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-            const yDateStr = yesterdayDate.toISOString().split('T')[0];
+            const yDateIso = yesterdayDate.toISOString().split('T')[0];
             
-            const record = dailyRecords.find(r => r.dateIso === yDateStr);
+            const record = dailyRecords.find(r => r.dateIso === yDateIso);
             if(!record) return "لا يوجد سجل أمس";
 
             for(let branch in record.allocations) {
-                const al = record.allocations[branch];
-                if(al.rep === personName) return `مندوب في: ${branch}`;
-                if(al.snacks === personName) return `سبورت سناكس: ${branch}`;
-                if(al.choco === personName) return `سبورت شوكلت: ${branch}`;
-                if(al.ambient === personName) return `سبورت برة الثلاجة: ${branch}`;
+                if(record.allocations[branch] === personName) return `مندوب في: ${branch}`;
+            }
+            if(record.supports) {
+                if(record.supports.snacks && record.supports.snacks.includes(personName)) return "سبورت سناكس أمس";
+                if(record.supports.chocolate && record.supports.chocolate.includes(personName)) return "سبورت شوكلت أمس";
+                if(record.supports.ambient && record.supports.ambient.includes(personName)) return "برة الثلاجة أمس";
             }
             return "متاح (لم يُكلف أمس)";
         }
 
+        /* BRANCHES ALLOCATION RENDERING */
         function renderBranches() {
             const tbody = document.getElementById('branches-tbody');
             tbody.innerHTML = '';
 
             let repCounts = {};
-
-            branchesList.forEach((branch, idx) => {
-                const al = allocations[branch] || { rep: '', snacks: '', choco: '', ambient: '' };
-                if(al.rep) repCounts[al.rep] = (repCounts[al.rep] || 0) + 1;
+            branchesList.forEach(branch => {
+                const rep = allocations[branch] || '';
+                if(rep) repCounts[rep] = (repCounts[rep] || 0) + 1;
             });
 
             let coveredCount = 0;
             let conflictCount = 0;
 
             branchesList.forEach((branch, idx) => {
-                const al = allocations[branch] || { rep: '', snacks: '', choco: '', ambient: '' };
-                if(al.rep) coveredCount++;
+                const rep = allocations[branch] || '';
+                if(rep) coveredCount++;
 
-                const isRepConflict = al.rep && repCounts[al.rep] > 1;
-                if(isRepConflict) conflictCount++;
+                const isConflict = rep && repCounts[rep] > 1;
+                if(isConflict) conflictCount++;
 
-                const repYesterday = getYesterdayAssignment(al.rep);
+                const yesterdayInfo = getYesterdayAssignment(rep);
 
-                let optionsHTML = '<option value="">-- اختر --</option>';
+                let optionsHTML = '<option value="">-- اختر المندوب --</option>';
                 teamMembers.forEach(m => {
-                    const sel = (m.name === al.rep) ? 'selected' : '';
+                    const sel = (m.name === rep) ? 'selected' : '';
                     optionsHTML += `<option value="${m.name}" ${sel}>${m.name} (${m.hr})</option>`;
                 });
 
-                let snacksOptions = '<option value="">-- بلا --</option>';
-                teamMembers.forEach(m => {
-                    const sel = (m.name === al.snacks) ? 'selected' : '';
-                    snacksOptions += `<option value="${m.name}" ${sel}>${m.name}</option>`;
-                });
-
-                let chocoOptions = '<option value="">-- بلا --</option>';
-                teamMembers.forEach(m => {
-                    const sel = (m.name === al.choco) ? 'selected' : '';
-                    chocoOptions += `<option value="${m.name}" ${sel}>${m.name}</option>`;
-                });
-
-                let ambientOptions = '<option value="">-- بلا --</option>';
-                teamMembers.forEach(m => {
-                    const sel = (m.name === al.ambient) ? 'selected' : '';
-                    ambientOptions += `<option value="${m.name}" ${sel}>${m.name}</option>`;
-                });
-
                 tbody.innerHTML += `
-                    <tr class="branch-row" data-branch="${branch}" data-rep="${al.rep}">
+                    <tr class="branch-row" data-branch="${branch}" data-rep="${rep}">
                         <td>${idx + 1}</td>
                         <td><strong>${branch}</strong></td>
                         <td>
-                            <select class="${isRepConflict ? 'conflict' : ''}" onchange="updateAllocation('${branch}', 'rep', this.value)">
+                            <select class="${isConflict ? 'conflict' : ''}" onchange="updateAllocation('${branch}', this.value)">
                                 ${optionsHTML}
                             </select>
-                            <div class="history-badge">أمس: ${repYesterday}</div>
+                            <div class="history-badge">أمس: ${yesterdayInfo}</div>
                         </td>
-                        <td><select onchange="updateAllocation('${branch}', 'snacks', this.value)">${snacksOptions}</select></td>
-                        <td><select onchange="updateAllocation('${branch}', 'choco', this.value)">${chocoOptions}</select></td>
-                        <td><select onchange="updateAllocation('${branch}', 'ambient', this.value)">${ambientOptions}</select></td>
                     </tr>
                 `;
             });
@@ -410,9 +615,8 @@
             localStorage.setItem('mp_allocations', JSON.stringify(allocations));
         }
 
-        function updateAllocation(branch, field, value) {
-            if(!allocations[branch]) allocations[branch] = { rep: '', snacks: '', choco: '', ambient: '' };
-            allocations[branch][field] = value;
+        function updateAllocation(branch, value) {
+            allocations[branch] = value;
             renderBranches();
         }
 
@@ -433,12 +637,18 @@
             });
         }
 
+        /* DAILY RECORDS */
         function saveDailyRecord() {
             const todayIso = new Date().toISOString().split('T')[0];
             const dateStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
             
             const existingIndex = dailyRecords.findIndex(r => r.dateIso === todayIso);
-            const recordObj = { dateStr, dateIso: todayIso, allocations: JSON.parse(JSON.stringify(allocations)) };
+            const recordObj = { 
+                dateStr, 
+                dateIso: todayIso, 
+                allocations: JSON.parse(JSON.stringify(allocations)),
+                supports: JSON.parse(JSON.stringify(supportsAllocation))
+            };
             
             if(existingIndex >= 0) {
                 dailyRecords[existingIndex] = recordObj;
@@ -459,22 +669,21 @@
             }
 
             dailyRecords.forEach((rec, idx) => {
-                let branchesSummary = '';
+                let summaryHTML = '';
                 for(let b in rec.allocations) {
-                    const al = rec.allocations[b];
-                    if(al.rep || al.snacks || al.choco || al.ambient) {
-                        branchesSummary += `<div style="font-size: 13px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05);"><strong>${b}:</strong> مندوب (${al.rep || '---'}) | سناكس (${al.snacks || '---'}) | شوكلت (${al.choco || '---'}) | برة الثلاجة (${al.ambient || '---'})</div>`;
+                    if(rec.allocations[b]) {
+                        summaryHTML += `<div style="font-size: 13px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.03);"><strong>${b}:</strong> ${rec.allocations[b]}</div>`;
                     }
                 }
 
                 container.innerHTML += `
-                    <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 12px;">
+                    <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 14px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <h4 style="color: var(--secondary); font-size: 16px;">📅 سجل تاريخ: ${rec.dateStr}</h4>
+                            <h4 style="color: var(--pink); font-size: 16px;">📅 سجل تاريخ: ${rec.dateStr}</h4>
                             <button class="btn btn-danger" style="padding: 4px 12px; font-size: 12px; width: auto;" onclick="deleteRecord(${idx})">حذف السجل</button>
                         </div>
-                        <div style="max-height: 200px; overflow-y: auto; padding-right: 8px;">
-                            ${branchesSummary || '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تعيينات مسجلة في هذا اليوم</p>'}
+                        <div style="max-height: 180px; overflow-y: auto; padding-right: 4px;">
+                            ${summaryHTML || '<p style="color: var(--text-muted); font-size: 13px;">لا توجد تعيينات مسجلة</p>'}
                         </div>
                     </div>
                 `;
@@ -487,11 +696,42 @@
             renderRecords();
         }
 
+        /* EXPORT CLEAN IMAGE FOR WHATSAPP */
         function exportImage() {
+            const expBranchesTbody = document.getElementById('export-branches-tbody');
+            expBranchesTbody.innerHTML = '';
+            let idx = 1;
+            for(let branch in allocations) {
+                const rep = allocations[branch];
+                if(rep) {
+                    expBranchesTbody.innerHTML += `
+                        <tr>
+                            <td>${idx++}</td>
+                            <td>${branch}</td>
+                            <td>${rep}</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            ['snacks', 'chocolate', 'ambient'].forEach(cat => {
+                const ul = document.getElementById(`export-${cat}-ul`);
+                ul.innerHTML = '';
+                const list = supportsAllocation[cat] || [];
+                const validList = list.filter(item => item && item.trim() !== "");
+                if(validList.length === 0) {
+                    ul.innerHTML = '<li>لا يوجد</li>';
+                } else {
+                    validList.forEach(name => {
+                        ul.innerHTML += `<li>${name}</li>`;
+                    });
+                }
+            });
+
             const area = document.getElementById('export-area');
-            html2canvas(area, { scale: 2, backgroundColor: '#1e293b' }).then(canvas => {
+            html2canvas(area, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = `Market_Plan_Allocation_${new Date().toISOString().split('T')[0]}.png`;
+                link.download = `Market_Plan_${new Date().toISOString().split('T')[0]}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             });
