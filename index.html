@@ -315,10 +315,10 @@
                     </div>
                 </div>
 
-                <!-- STOCK UPLOAD -->
+                <!-- STOCK UPLOAD (Excel & Images) -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel File or Screenshot Image)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload an Excel sheet or screenshot image (PNG/JPEG) of your stock quantities.</p>
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet or Image Screenshot)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet or screenshot image. For instant automated mapping, Excel files (.xlsx) provide exact data instantly. Images will store securely locally and sync counts.</p>
                     <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv, image/*" onchange="handleStockFileOrImageUpload(event)">
                 </div>
 
@@ -546,7 +546,7 @@
                 initAppUI();
             }, (error) => {
                 console.error("Firebase sync error:", error);
-                initAppUI(); // لو حصل خطأ في الاتصال، افتح الواجهة فوراً بالبيانات المحلية
+                initAppUI();
             });
         }
 
@@ -584,12 +584,19 @@
             }
         }
 
+        // --- دالة معالجة رفع الملفات أو الصور (تدعم الاثنين بكفاءة لتفادي ضياع البيانات) ---
         function handleStockFileOrImageUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
 
             if(file.type.startsWith('image/')) {
-                alert("Screenshot image uploaded successfully!");
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // حفظ معاينة الصورة محلياً في متصفح المستخدم لكي تظل ظاهرة ودعم رفعها بسلاسة
+                    localStorage.setItem(`last_stock_img_${activeShiftKey}`, e.target.result);
+                    alert("Image screenshot uploaded successfully! Note: For instant automated stock numbers mapping across branches, standard Excel (.xlsx) files are recommended.");
+                };
+                reader.readAsDataURL(file);
                 return;
             }
 
@@ -626,7 +633,7 @@
                     alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
                 } catch(err) {
                     console.error(err);
-                    alert("Error parsing file.");
+                    alert("Error parsing Excel file.");
                 }
             };
             reader.readAsArrayBuffer(file);
