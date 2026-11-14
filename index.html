@@ -597,18 +597,17 @@
             }
         }
 
-        // --- إصلاح نهائي لقراءة ملفات الإكسيل بأمان وتجنب أي خطأ Parsing ---
+        // --- إصلاح فائق القوة لقراءة ملفات الإكسيل بأمان تام عبر ArrayBuffer ---
         function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
 
             const reader = new FileReader();
             
-            // استخدام قراءة البيانات كـ Binary String لتجنب أخطاء صيغ الملفات (مثل xls أو xlsx)
             reader.onload = function(e) {
                 try {
-                    const data = e.target.result;
-                    const workbook = XLSX.read(data, {type: 'binary'});
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
@@ -669,7 +668,7 @@
                 alert("Failed to read the file.");
             };
             
-            reader.readAsBinaryString(file);
+            reader.readAsArrayBuffer(file);
         }
 
         function renderDatabase() {
