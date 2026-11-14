@@ -414,7 +414,7 @@
                         <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--pink);">Add New Team Member</h3>
                         <div class="form-group"><label>Full Name</label><input type="text" id="new-name" placeholder="e.g. ZIAD DARWIN"></div>
                         <div class="form-group"><label>HR ID</label><input type="text" id="new-hr" placeholder="e.g. HR1024"></div>
-                        <button class="btn btn-pink" onclick="addTeamMember()">Add to Database</button>
+                        <button class="btn btn-pink" onclick="window.addTeamMember()">Add to Database</button>
                     </div>
                     <div class="table-responsive">
                         <table>
@@ -425,17 +425,17 @@
                 </div>
             </div>
 
-            <!-- TAB 3: BRANCHES -->
+            <!-- TAB 3: BRANCHES (مع أزرار التحريك لفوق وتحت) -->
             <div id="tab-branches" class="tab-content">
                 <div class="db-grid">
                     <div class="form-card">
                         <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--secondary);">Add New Branch</h3>
                         <div class="form-group"><label>Branch Name</label><input type="text" id="new-branch-name" placeholder="Enter branch name..."></div>
-                        <button class="btn btn-success" onclick="addNewBranch()">Add Branch</button>
+                        <button class="btn btn-success" onclick="window.addNewBranch()">Add Branch</button>
                     </div>
                     <div class="table-responsive">
                         <table>
-                            <thead><tr><th>#</th><th>Branch Name</th><th style="width: 100px;">Action</th></tr></thead>
+                            <thead><tr><th>#</th><th>Branch Name</th><th style="width: 150px;">Order / Action</th></tr></thead>
                             <tbody id="branches-mgmt-tbody"></tbody>
                         </table>
                     </div>
@@ -447,8 +447,8 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
                     <h3 style="font-size: 18px; color: var(--pink);">Historical Daily Records</h3>
                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <div class="search-box" style="width: 260px;"><span>🔍</span><input type="text" id="record-search-input" placeholder="Search records..." oninput="renderRecords()"></div>
-                        <button class="btn btn-success" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="openReportModal()">📊 Export Detailed Daily Excel (.xlsx)</button>
+                        <div class="search-box" style="width: 260px;"><span>🔍</span><input type="text" id="record-search-input" placeholder="Search records..." oninput="filterRecords()"></div>
+                        <button class="btn btn-success" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="window.openReportModal()">📊 Export Detailed Daily Excel (.xlsx)</button>
                     </div>
                 </div>
                 <div id="records-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
@@ -505,6 +505,7 @@
             const body = document.body;
             body.setAttribute('data-theme', body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         }
+        window.toggleTheme = toggleTheme;
 
         function checkLogin() {
             const val = document.getElementById('pass-input').value.trim();
@@ -540,6 +541,7 @@
                 document.getElementById('login-err').style.display = 'block';
             }
         }
+        window.checkLogin = checkLogin;
 
         function initFirebaseSyncForShift() {
             const dbRef = window.fbRef(window.fbDB, `shifts_data/${activeShiftKey}/`);
@@ -574,6 +576,7 @@
             if(tabId === 'records') renderRecords();
             if(tabId === 'branches') renderBranchesManagement();
         }
+        window.switchTab = switchTab;
 
         function initAppUI() {
             const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -596,8 +599,9 @@
                 alert("Reset successfully!");
             }
         }
+        window.resetAllocation = resetAllocation;
 
-        // --- محرك مطابقة ذكي مبسط يربط الفروع المنسوخة بالسيستم بذكاء ---
+        // --- محرك الاستيراد والسحب والترتيب ---
         function importPastedStockData() {
             const pastedText = document.getElementById('paste-csv-area').value.trim();
             if(!pastedText) {
@@ -613,7 +617,6 @@
                 let cleanLine = line.trim();
                 if(!cleanLine || cleanLine.toLowerCase().includes("grand total") || cleanLine.toLowerCase().includes("row labels")) return;
 
-                // استخراج اسم الفرع والرقم (الرقم بيكون في آخر السطر)
                 let lastSpaceIdx = cleanLine.lastIndexOf("\t");
                 if(lastSpaceIdx === -1) lastSpaceIdx = cleanLine.lastIndexOf("   ");
                 if(lastSpaceIdx === -1) lastSpaceIdx = cleanLine.lastIndexOf(" ");
@@ -625,7 +628,6 @@
 
                 if(!rawBranchName || !stockQty) return;
 
-                // مطابقة ذكية بين اسم الفرع المنسوخ وأسماء فروع السيستم الحالي
                 let sheetNameKey = rawBranchName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
                 let matchedBranch = cur.branchesList.find(b => {
@@ -644,6 +646,34 @@
             document.getElementById('paste-csv-area').value = '';
             alert(`✅ تم بنجاح تحديث وربط ${matchedCount} فرع بالاستوك المطلوب للشفت الحالي!`);
         }
+        window.importPastedStockData = importPastedStockData;
+
+        // --- وظائف تحريك الفروع (فوق وتحت) ---
+        function moveBranchUp(index) {
+            let cur = shiftData[activeShiftKey];
+            if(index > 0) {
+                let temp = cur.branchesList[index];
+                cur.branchesList[index] = cur.branchesList[index - 1];
+                cur.branchesList[index - 1] = temp;
+                saveShiftToCloud();
+                renderBranchesManagement();
+                renderBranches();
+            }
+        }
+        window.moveBranchUp = moveBranchUp;
+
+        function moveBranchDown(index) {
+            let cur = shiftData[activeShiftKey];
+            if(index < cur.branchesList.length - 1) {
+                let temp = cur.branchesList[index];
+                cur.branchesList[index] = cur.branchesList[index + 1];
+                cur.branchesList[index + 1] = temp;
+                saveShiftToCloud();
+                renderBranchesManagement();
+                renderBranches();
+            }
+        }
+        window.moveBranchDown = moveBranchDown;
 
         function renderDatabase() {
             const cur = shiftData[activeShiftKey];
@@ -678,6 +708,7 @@
             renderSupportsUI();
             renderBranches();
         }
+        window.addTeamMember = addTeamMember;
 
         function deleteMember(index) {
             shiftData[activeShiftKey].teamMembers.splice(index, 1);
@@ -686,6 +717,7 @@
             renderSupportsUI();
             renderBranches();
         }
+        window.deleteMember = deleteMember;
 
         function renderBranchesManagement() {
             const cur = shiftData[activeShiftKey];
@@ -701,11 +733,18 @@
                     <tr>
                         <td>${index + 1}</td>
                         <td><strong>${branch}</strong></td>
-                        <td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; width: auto;" onclick="deleteBranch(${index})">Delete</button></td>
+                        <td>
+                            <div style="display: flex; gap: 4px;">
+                                <button class="btn" style="padding: 4px 8px; font-size: 11px; width: auto;" onclick="moveBranchUp(${index})">⬆️</button>
+                                <button class="btn" style="padding: 4px 8px; font-size: 11px; width: auto;" onclick="moveBranchDown(${index})">⬇️</button>
+                                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px; width: auto;" onclick="deleteBranch(${index})">✕</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
             });
         }
+        window.renderBranchesManagement = renderBranchesManagement;
 
         function addNewBranch() {
             const name = document.getElementById('new-branch-name').value.trim();
@@ -716,6 +755,7 @@
             renderBranchesManagement();
             renderBranches();
         }
+        window.addNewBranch = addNewBranch;
 
         function deleteBranch(index) {
             shiftData[activeShiftKey].branchesList.splice(index, 1);
@@ -723,6 +763,7 @@
             renderBranchesManagement();
             renderBranches();
         }
+        window.deleteBranch = deleteBranch;
 
         function addSupportItem(category) {
             let cur = shiftData[activeShiftKey];
@@ -732,6 +773,7 @@
             saveShiftToCloud();
             renderSupportsUI();
         }
+        window.addSupportItem = addSupportItem;
 
         function updateSupportItem(category, index, val) {
             let cur = shiftData[activeShiftKey];
@@ -739,6 +781,7 @@
             cur.supportsAllocation[category][index] = val;
             saveShiftToCloud();
         }
+        window.updateSupportItem = updateSupportItem;
 
         function removeSupportItem(category, index) {
             let cur = shiftData[activeShiftKey];
@@ -747,6 +790,7 @@
             saveShiftToCloud();
             renderSupportsUI();
         }
+        window.removeSupportItem = removeSupportItem;
 
         function renderSupportsUI() {
             let cur = shiftData[activeShiftKey];
@@ -783,6 +827,7 @@
                 });
             });
         }
+        window.renderSupportsUI = renderSupportsUI;
 
         function renderBranches() {
             const cur = shiftData[activeShiftKey];
@@ -842,12 +887,14 @@
             document.getElementById('stat-covered').innerText = coveredCount;
             document.getElementById('stat-conflicts').innerText = conflictCount;
         }
+        window.renderBranches = renderBranches;
 
         function updateAllocation(branch, value) {
             shiftData[activeShiftKey].allocations[branch] = value;
             saveShiftToCloud();
             renderBranches();
         }
+        window.updateAllocation = updateAllocation;
 
         function filterBranches() {
             const query = document.getElementById('search-input').value.toLowerCase();
@@ -863,6 +910,7 @@
                 }
             });
         }
+        window.filterBranches = filterBranches;
 
         function saveDailyRecord() {
             let cur = shiftData[activeShiftKey];
@@ -887,6 +935,7 @@
             saveShiftToCloud();
             alert("Today's plan successfully saved!");
         }
+        window.saveDailyRecord = saveDailyRecord;
 
         function renderRecords() {
             let cur = shiftData[activeShiftKey];
@@ -918,6 +967,12 @@
                 `;
             });
         }
+        window.renderRecords = renderRecords;
+
+        function filterRecords() {
+            renderRecords();
+        }
+        window.filterRecords = filterRecords;
 
         function viewRecordSnapshot(idx) {
             let cur = shiftData[activeShiftKey];
@@ -942,15 +997,19 @@
             document.getElementById('modal-body-content').innerHTML = contentHtml;
             document.getElementById('modal-overlay').style.display = 'flex';
         }
+        window.viewRecordSnapshot = viewRecordSnapshot;
 
         function closeModal(e) { document.getElementById('modal-overlay').style.display = 'none'; }
+        window.closeModal = closeModal;
         function closeModalForce() { document.getElementById('modal-overlay').style.display = 'none'; }
+        window.closeModalForce = closeModalForce;
 
         function deleteRecord(idx) {
             shiftData[activeShiftKey].dailyRecords.splice(idx, 1);
             saveShiftToCloud();
             renderRecords();
         }
+        window.deleteRecord = deleteRecord;
 
         function initAdminPanel() {
             const adminRef = window.fbRef(window.fbDB, 'shifts_data/');
@@ -991,6 +1050,7 @@
             window.fbSet(window.fbRef(window.fbDB, `shifts_data/${key}/`), shiftData[key]);
             alert(`Shift ${key} updated successfully!`);
         }
+        window.updateShiftConfig = updateShiftConfig;
 
         function renderAdminRecords() {
             const container = document.getElementById('admin-records-container');
@@ -1031,15 +1091,19 @@
             });
             document.getElementById('report-modal-overlay').style.display = 'flex';
         }
+        window.openReportModal = openReportModal;
 
         function closeReportModal(e) { document.getElementById('report-modal-overlay').style.display = 'none'; }
+        window.closeReportModal = closeReportModal;
         function closeReportModalForce() { document.getElementById('report-modal-overlay').style.display = 'none'; }
+        window.closeReportModalForce = closeReportModalForce;
 
         function toggleSelectAllReps(btn) {
             const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]');
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
             checkboxes.forEach(cb => cb.checked = !allChecked);
         }
+        window.toggleSelectAllReps = toggleSelectAllReps;
 
         function generateMonthlyExcelReport() {
             let cur = shiftData[activeShiftKey];
@@ -1075,6 +1139,7 @@
             closeReportModalForce();
             alert("Report generated successfully!");
         }
+        window.generateMonthlyExcelReport = generateMonthlyExcelReport;
 
         function exportImage() {
             let cur = shiftData[activeShiftKey];
@@ -1107,6 +1172,7 @@
                 link.click();
             });
         }
+        window.exportImage = exportImage;
     </script>
 </body>
 </html>
