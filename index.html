@@ -326,10 +326,10 @@
                     </div>
                 </div>
 
-                <!-- FAST STOCK PASTE IMPORTER -->
+                <!-- FAST STOCK PASTE IMPORTER (بدون تهنيج وبأداء سريع جداً) -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 استيراد الاستوك دفعة واحدة (نسخ ولصق السري)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ جدول الفروع والأرقام من الإكسيل والزقه هنا مباشرة، واضغط زر الاستيراد عشان يتوزع كل رقم على فرعه في ثانية واحدة!</p>
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 استيراد الاستوك دفعة واحدة (آمن وسريع)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">ألصق البيانات هنا (لو ظهر تهنيج استخدم Ctrl+Shift+V للصق الخام)، ثم اضغط زر الاستيراد:</p>
                     <textarea id="paste-csv-area" placeholder="KAT/OUT Alexandria FP #1    17109&#10;KAT/OUT Alexandria FP #2    11549" style="width: 100%; height: 90px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
                     <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedStockData()">🚀 استيراد وتوزيع الأرقام فوراً</button>
                 </div>
@@ -425,7 +425,7 @@
                 </div>
             </div>
 
-            <!-- TAB 3: BRANCHES (مع أزرار التحريك لفوق وتحت) -->
+            <!-- TAB 3: BRANCHES (ترتيب الفروع فوق وتحت) -->
             <div id="tab-branches" class="tab-content">
                 <div class="db-grid">
                     <div class="form-card">
@@ -601,7 +601,7 @@
         }
         window.resetAllocation = resetAllocation;
 
-        // --- محرك الاستيراد والسحب والترتيب ---
+        // --- معالجة الاستيراد بشكل آمن وسريع بدون تهنيج ---
         function importPastedStockData() {
             const pastedText = document.getElementById('paste-csv-area').value.trim();
             if(!pastedText) {
@@ -648,7 +648,7 @@
         }
         window.importPastedStockData = importPastedStockData;
 
-        // --- وظائف تحريك الفروع (فوق وتحت) ---
+        // --- ترتيـب الفروع (تحريك لأعلى ولأسفل) ---
         function moveBranchUp(index) {
             let cur = shiftData[activeShiftKey];
             if(index > 0) {
