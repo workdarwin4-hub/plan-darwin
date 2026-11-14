@@ -180,10 +180,9 @@
             display: none; justify-content: center; align-items: center; padding: 20px; overflow-y: auto;
         }
         .modal-content {
-            background: var(--card-bg); color: var(--text); padding: 30px; border-radius: 16px; max-width: 850px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; border: 1px solid var(--border);
+            background: var(--card-bg); color: var(--text); padding: 30px; border-radius: 16px; max-width: 550px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; border: 1px solid var(--border);
         }
 
-        /* تخصيص مربعات الاختيار للمندوبين */
         .checkbox-container {
             max-height: 200px; overflow-y: auto; background: var(--select-bg); border: 1px solid var(--border);
             border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;
@@ -215,7 +214,7 @@
 
     <!-- Record View Modal -->
     <div id="modal-overlay" onclick="closeModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 850px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">
                 <h3 id="modal-title" style="font-size: 20px; font-weight: 900;">Record Snapshot</h3>
                 <button class="btn btn-danger" style="padding: 4px 12px; font-size: 12px; width: auto;" onclick="closeModalForce()">Close ✕</button>
@@ -226,9 +225,9 @@
 
     <!-- Monthly Report Modal Selector with Checkboxes -->
     <div id="report-modal-overlay" onclick="closeReportModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()" style="max-width: 500px;">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">
-                <h3 style="font-size: 18px; font-weight: 900; color: var(--pink);">📊 Export Monthly Excel Report</h3>
+                <h3 style="font-size: 18px; font-weight: 900; color: var(--pink);">📊 Export Detailed Daily Excel Report</h3>
                 <button class="btn btn-danger" style="padding: 4px 12px; font-size: 12px; width: auto;" onclick="closeReportModalForce()">Close ✕</button>
             </div>
             <div class="form-group">
@@ -237,11 +236,11 @@
                     <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; width: auto;" onclick="toggleSelectAllReps(this)">Select All / None</button>
                 </div>
                 <div id="report-checkboxes-container" class="checkbox-container">
-                    <!-- سيتم تعبئتها ديناميكياً بـ Checkboxes -->
+                    <!-- Checkboxes -->
                 </div>
-                <small style="color: var(--text-muted); display: block; margin-top: 6px;">💡 Check the box next to each rep you want. If none checked, ALL reps will be exported.</small>
+                <small style="color: var(--text-muted); display: block; margin-top: 6px;">💡 Check reps to export their day-by-day branches and support log. If none checked, ALL reps will be exported.</small>
             </div>
-            <button class="btn btn-success" style="margin-top: 16px;" onclick="generateMonthlyExcelReport()">📥 Download Excel Sheet (.xlsx)</button>
+            <button class="btn btn-success" style="margin-top: 16px;" onclick="generateMonthlyExcelReport()">📥 Download Detailed Excel (.xlsx)</button>
         </div>
     </div>
 
@@ -443,7 +442,7 @@
                             <span>🔍</span>
                             <input type="text" id="record-search-input" placeholder="Search records by date..." oninput="renderRecords()">
                         </div>
-                        <button class="btn btn-success" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="openReportModal()">📊 Export Monthly Report (Excel)</button>
+                        <button class="btn btn-success" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="openReportModal()">📊 Export Detailed Daily Excel (.xlsx)</button>
                     </div>
                 </div>
                 <div id="records-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
@@ -872,7 +871,7 @@
             renderRecords();
         }
 
-        // --- دوال تقرير الإكسيل الشهري باستخدام Checkboxes ---
+        // --- دوال تقرير الإكسيل المفصل بالتاريخ ---
         function openReportModal() {
             const container = document.getElementById('report-checkboxes-container');
             container.innerHTML = '';
@@ -911,7 +910,6 @@
             const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]:checked');
             let selectedReps = Array.from(checkboxes).map(cb => cb.value);
             
-            // لو مبختارش ولا مربع، نختار كل الفريق تلقائياً
             if(selectedReps.length === 0) {
                 selectedReps = teamMembers.map(m => m.name);
             }
@@ -921,62 +919,63 @@
                 return;
             }
 
-            let reportData = [];
+            let reportRows = [];
 
-            selectedReps.forEach(repName => {
-                let branchVisits = {};
-                let unassignedDays = 0;
+            // المرور على كل الأيام المسجلة في الأرشيف
+            dailyRecords.forEach(rec => {
+                let dateStr = rec.dateStr;
+                let dateIso = rec.dateIso;
 
-                dailyRecords.forEach(rec => {
-                    let assignedToday = false;
+                // تجميع مكان تواجد كل مندوب في اليوم ده
+                let repAssignments = {}; // repName -> assignment description
 
-                    for(let branch in rec.allocations) {
-                        if(rec.allocations[branch] === repName) {
-                            branchVisits[branch] = (branchVisits[branch] || 0) + 1;
-                            assignedToday = true;
-                        }
-                    }
-
-                    if(rec.supports) {
-                        ['snacks', 'chocolate', 'ambient'].forEach(cat => {
-                            if(rec.supports[cat] && rec.supports[cat].includes(repName)) {
-                                assignedToday = true;
-                            }
-                        });
-                    }
-
-                    if(!assignedToday) {
-                        unassignedDays++;
-                    }
-                });
-
-                let favoriteBranch = "None";
-                let maxVisits = 0;
-                for(let branch in branchVisits) {
-                    if(branchVisits[branch] > maxVisits) {
-                        maxVisits = branchVisits[branch];
-                        favoriteBranch = branch;
+                // 1. فحص الفروع
+                for(let branch in rec.allocations) {
+                    let rep = rec.allocations[branch];
+                    if(rep && rep !== "Without Rep") {
+                        if(!repAssignments[rep]) repAssignments[rep] = [];
+                        repAssignments[rep].push(`Branch: ${branch}`);
                     }
                 }
 
-                let branchesDetail = Object.keys(branchVisits).map(b => `${b} (${branchVisits[b]} times)`).join(', ');
+                // 2. فحص الدعم (Supports)
+                if(rec.supports) {
+                    ['snacks', 'chocolate', 'ambient'].forEach(cat => {
+                        if(rec.supports[cat]) {
+                            rec.supports[cat].forEach(rep => {
+                                if(rep) {
+                                    if(!repAssignments[rep]) repAssignments[rep] = [];
+                                    repAssignments[rep].push(`Support (${cat})`);
+                                }
+                            });
+                        }
+                    });
+                }
 
-                reportData.push({
-                    "Representative Name": repName,
-                    "Total Days Recorded": dailyRecords.length,
-                    "Days Unassigned / No Support": unassignedDays,
-                    "Favorite / Most Visited Branch": favoriteBranch,
-                    "All Branch Visits Breakdown": branchesDetail || "No branches visited"
+                // إنشاء سطر لكل مندوب تم اختياره في هذا اليوم
+                selectedReps.forEach(repName => {
+                    let status = "Not Assigned / Off";
+                    if(repAssignments[repName] && repAssignments[repName].length > 0) {
+                        status = repAssignments[repName].join(" + ");
+                    }
+
+                    reportRows.push({
+                        "Date": dateStr,
+                        "Date (ISO)": dateIso,
+                        "Representative Name": repName,
+                        "Daily Status / Location": status
+                    });
                 });
             });
 
-            const worksheet = XLSX.utils.json_to_sheet(reportData);
+            // إنشاء ملف الإكسيل
+            const worksheet = XLSX.utils.json_to_sheet(reportRows);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Rep Report");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Log Report");
 
-            XLSX.writeFile(workbook, `Monthly_Market_Plan_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+            XLSX.writeFile(workbook, `Detailed_Daily_Market_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
             closeReportModalForce();
-            alert("Monthly Excel Report successfully generated and downloaded!");
+            alert("Detailed Daily Excel Report successfully generated!");
         }
 
         function exportImage() {
