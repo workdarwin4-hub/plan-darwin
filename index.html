@@ -327,11 +327,11 @@
 
                 <!-- STOCK UPLOAD / PASTE -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Strict Matching for Current Shift Only)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ بيانات الشيت والزقها هنا. السيستم **سيقبل ويحدث فقط فروع الشفت الحالي المفتوح**، وأي فرع تخص شفت تاني هيتم تجاهلها تماماً!</p>
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Accurate Full Number Matching)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ بيانات الشيت كاملة (اسم الفرع والرقم زي 3,060 أو 1500) والزقها هنا. السيستم هيقرا الرقم بالكامل بدقة للشفت الحالي فقط.</p>
                     <input type="file" id="stock-file-input" accept=".csv, .txt" onchange="handleCsvUpload(event)" style="margin-bottom: 12px;">
-                    <textarea id="paste-csv-area" placeholder="KAT/OUT Heliopolis FP #4    3,060&#10;October 2    1,500" style="width: 100%; height: 100px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
-                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وتحديث فروع هذا الشفت فقط</button>
+                    <textarea id="paste-csv-area" placeholder="KAT/OUT Heliopolis FP #4    3,060&#10;Hadayek Elahram    2,807" style="width: 100%; height: 100px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
+                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وسحب الأرقام كاملة بدقة</button>
                 </div>
 
                 <!-- SUPPORTS -->
@@ -597,7 +597,7 @@
             }
         }
 
-        // --- محرك مطابقة ذكي: يقارن أسامي الشيت بفروع الشفت الحالي المفتوح فقط ويتجاهل الباقي ---
+        // --- محرك مطابقة ذكي دقيق يسحب الاسم الكامل ورقم الاستوك بالكامل للشفت الحالي فقط ---
         function parseStockTextData(text) {
             const lines = text.split(/\r?\n/);
             let cur = shiftData[activeShiftKey];
@@ -607,31 +607,37 @@
                 let cleanLine = line.trim();
                 if(!cleanLine || cleanLine.toLowerCase().includes("grand total")) return;
 
-                let parts = cleanLine.split(/,|\t|\s{2,}/);
-                if(parts.length >= 2) {
-                    let rawBranchName = parts[0].trim();
-                    let stockQty = parts[parts.length - 1].trim();
+                // استخراج الرقم الأخير في السطر مهما كانت المسافات أو الفواصل (مثل 3,060 أو 2,807)
+                let numMatch = cleanLine.match(/([\d,]+(?:\.\d+)?)$/);
+                if(!numMatch) return;
 
-                    if(!rawBranchName || isNaN(stockQty.replace(/,/g, ''))) return;
+                let stockQty = numMatch[1];
+                let rawBranchName = cleanLine.replace(stockQty, '').trim();
 
-                    // البحث حصرياً داخل فروع الشفت الحالي المفتوح فقط
-                    let matchedBranch = cur.branchesList.find(b => {
-                        let target = b.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        let source = rawBranchName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        return source.includes(target) || target.includes(source);
-                    });
+                if(!rawBranchName) return;
 
-                    if(matchedBranch) {
-                        cur.branchStock[matchedBranch] = stockQty;
-                        matchedCount++;
-                    }
-                    // لو الفرع مش موجود في فروع الشفت ده، يتم تجاهله تماماً دون إضافته
+                // توحيد كلمات حدائق / hadayek / hadaeq للمطابقة المؤكدة
+                let cleanSource = rawBranchName.toLowerCase()
+                    .replace(/hadayek|hadaeq|حدائق|حدائق الاهرام/g, 'hadayek')
+                    .replace(/[^a-z0-9]/g, '');
+
+                let matchedBranch = cur.branchesList.find(b => {
+                    let cleanTarget = b.toLowerCase()
+                        .replace(/hadayek|hadaeq|حدائق|حدائق الاهرام/g, 'hadayek')
+                        .replace(/[^a-z0-9]/g, '');
+                    
+                    return cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource);
+                });
+
+                if(matchedBranch) {
+                    cur.branchStock[matchedBranch] = stockQty;
+                    matchedCount++;
                 }
             });
 
             saveShiftToCloud();
             renderBranches();
-            alert(`✅ Done! Successfully matched and updated ${matchedCount} branches belonging to this shift.`);
+            alert(`✅ Done! Successfully matched and updated ${matchedCount} branches with full stock quantities.`);
         }
 
         function handleCsvUpload(event) {
@@ -1044,7 +1050,7 @@
             let cur = shiftData[activeShiftKey];
             const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]:checked');
             let selectedReps = Array.from(checkboxes).map(cb => cb.value);
-            if(selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
+            if(selectedRres = selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
             if(cur.dailyRecords.length === 0) { alert("No saved records available."); return; }
 
             let reportRows = [];
