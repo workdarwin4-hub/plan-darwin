@@ -327,11 +327,11 @@
 
                 <!-- STOCK UPLOAD / PASTE -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (CSV File or Quick Paste)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload a <b>.csv</b> file (Save your Excel as CSV UTF-8) OR paste data directly below for 100% error-free matching.</p>
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Strict Matching for Current Shift Only)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ بيانات الشيت والزقها هنا. السيستم **سيقبل ويحدث فقط فروع الشفت الحالي المفتوح**، وأي فرع تخص شفت تاني هيتم تجاهلها تماماً!</p>
                     <input type="file" id="stock-file-input" accept=".csv, .txt" onchange="handleCsvUpload(event)" style="margin-bottom: 12px;">
-                    <textarea id="paste-csv-area" placeholder="Or paste rows here (e.g. Alex 1, 150) then click Import..." style="width: 100%; height: 80px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
-                    <button class="btn btn-success" style="padding: 8px 16px; font-size: 13px; width: auto;" onclick="importPastedCsv()">🚀 Import Pasted Data</button>
+                    <textarea id="paste-csv-area" placeholder="KAT/OUT Heliopolis FP #4    3,060&#10;October 2    1,500" style="width: 100%; height: 100px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
+                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وتحديث فروع هذا الشفت فقط</button>
                 </div>
 
                 <!-- SUPPORTS -->
@@ -597,58 +597,41 @@
             }
         }
 
-        // --- محرك قراءة نصوص وسطور آمن 100% وبدون أي إيرور ---
+        // --- محرك مطابقة ذكي: يقارن أسامي الشيت بفروع الشفت الحالي المفتوح فقط ويتجاهل الباقي ---
         function parseStockTextData(text) {
             const lines = text.split(/\r?\n/);
             let cur = shiftData[activeShiftKey];
             let matchedCount = 0;
 
             lines.forEach(line => {
-                if(!line.trim()) return;
-                // تقسيم السطر بالفاصلة (CSV) أو علامة الجدولة (Tab)
-                let parts = line.split(/,|\t/);
+                let cleanLine = line.trim();
+                if(!cleanLine || cleanLine.toLowerCase().includes("grand total")) return;
+
+                let parts = cleanLine.split(/,|\t|\s{2,}/);
                 if(parts.length >= 2) {
-                    let rawBranchName = parts[0].trim().toLowerCase();
-                    let stockQty = parts[1].trim();
+                    let rawBranchName = parts[0].trim();
+                    let stockQty = parts[parts.length - 1].trim();
 
-                    if(!rawBranchName) return;
+                    if(!rawBranchName || isNaN(stockQty.replace(/,/g, ''))) return;
 
-                    rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
-
-                    cur.branchesList.forEach(branch => {
-                        let targetName = branch.toLowerCase().replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
-                        
-                        let targetNumMatch = targetName.match(/(?:#|\s+)?(\d+)/);
-                        let sourceNumMatch = rawBranchName.match(/(?:#|\s+)?(\d+)/);
-
-                        let isMatch = false;
-
-                        if (targetNumMatch && sourceNumMatch) {
-                            let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
-                            let baseSource = rawBranchName.replace(/#\d+|\d+/g, '').trim();
-                            
-                            if (rawBranchName.includes(baseTarget.slice(0, 3)) && targetNumMatch[1] === sourceNumMatch[1]) {
-                                isMatch = true;
-                            }
-                        } else {
-                            let cleanTarget = targetName.replace(/[^a-z0-9]/g, '');
-                            let cleanSource = rawBranchName.replace(/[^a-z0-9]/g, '');
-                            if (cleanTarget && (cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource))) {
-                                isMatch = true;
-                            }
-                        }
-
-                        if (isMatch) {
-                            cur.branchStock[branch] = stockQty;
-                            matchedCount++;
-                        }
+                    // البحث حصرياً داخل فروع الشفت الحالي المفتوح فقط
+                    let matchedBranch = cur.branchesList.find(b => {
+                        let target = b.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        let source = rawBranchName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        return source.includes(target) || target.includes(source);
                     });
+
+                    if(matchedBranch) {
+                        cur.branchStock[matchedBranch] = stockQty;
+                        matchedCount++;
+                    }
+                    // لو الفرع مش موجود في فروع الشفت ده، يتم تجاهله تماماً دون إضافته
                 }
             });
 
             saveShiftToCloud();
             renderBranches();
-            alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
+            alert(`✅ Done! Successfully matched and updated ${matchedCount} branches belonging to this shift.`);
         }
 
         function handleCsvUpload(event) {
@@ -1101,8 +1084,7 @@
                 const rep = cur.allocations[branch];
                 if(rep) {
                     const stock = cur.branchStock[branch] ? `${cur.branchStock[branch]} pcs` : '-';
-                    expPostalHtml = `<tr><td>${idx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
-                    expBranchesTbody.innerHTML += expPostalHtml;
+                    expBranchesTbody.innerHTML += `<tr><td>${idx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
                 }
             }
 
