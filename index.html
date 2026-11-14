@@ -329,7 +329,7 @@
                 <!-- STOCK UPLOAD -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
                     <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Smart matching supports Alex/اسكندرية and precise numbering.</p>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Smart matching supports Alexandria/Alex/اسكندرية and precise numbering.</p>
                     <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv" onchange="handleStockFileUpload(event)">
                 </div>
 
@@ -596,7 +596,7 @@
             }
         }
 
-        // --- دالة قراءة فائقة المرونة تتجاوز أي مشاكل صيغة أو خلايا مدمجة ---
+        // --- دالة قراءة متطورة تدعم Alexandria و Alex و اسكندرية وتقرا الأرقام بدقة ---
         function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -621,10 +621,11 @@
 
                             if(!rawBranchName) return;
 
-                            rawBranchName = rawBranchName.replace(/اسكندرية|الإسكندرية/g, 'alex');
+                            // توحيد مسميات الإسكندرية (Alexandria, Alex, اسكندرية) إلى alex لضمان التوافق
+                            rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
 
                             cur.branchesList.forEach(branch => {
-                                let targetName = branch.toLowerCase().replace(/اسكندرية|الإسكندرية/g, 'alex');
+                                let targetName = branch.toLowerCase().replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
                                 
                                 let targetNumMatch = targetName.match(/(?:#|\s+)?(\d+)/);
                                 let sourceNumMatch = rawBranchName.match(/(?:#|\s+)?(\d+)/);
@@ -1063,7 +1064,7 @@
             let cur = shiftData[activeShiftKey];
             const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]:checked');
             let selectedReps = Array.from(checkboxes).map(cb => cb.value);
-            if(selectedRres = selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
+            if(selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
             if(cur.dailyRecords.length === 0) { alert("No saved records available."); return; }
 
             let reportRows = [];
