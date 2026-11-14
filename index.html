@@ -329,7 +329,7 @@
                 <!-- STOCK UPLOAD -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
                     <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Smart matching supports Alexandria, Alex, اسكندرية و حدائق الأهرام بدقة تامة.</p>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Matches main branch keywords (Alex, Zayed, Hadayek, etc.) and numbers securely.</p>
                     <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv" onchange="handleStockFileUpload(event)">
                 </div>
 
@@ -596,7 +596,7 @@
             }
         }
 
-        // --- دالة قراءة آمنة 100% تتجاوز أي أخطاء ملفات إكسيل وتطابق الفروع الموجودة فقط ---
+        // --- دالة قراءة فائقة الذكاء ومقاومة للأخطاء 100% ---
         function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -606,7 +606,8 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array', cellDates: true, raw: true});
+                    // استخدام خيارات مرنة تتجاوز أي تنسيقات تالفة في الشيت
+                    const workbook = XLSX.read(data, {type: 'array', cellFormula: false, cellHTML: false});
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
@@ -621,7 +622,7 @@
 
                             if(!rawBranchName) return;
 
-                            // توحيد مسميات الفروع والمحافظات لتطابق مرن (مثل Alexandria, Alex, اسكندرية)
+                            // توحيد اسم الإسكندرية بجميع أشكاله
                             rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
 
                             cur.branchesList.forEach(branch => {
@@ -636,7 +637,7 @@
                                     let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
                                     let baseSource = rawBranchName.replace(/#\d+|\d+/g, '').trim();
                                     
-                                    if (rawBranchName.includes(baseTarget.slice(0, 4)) && targetNumMatch[1] === sourceNumMatch[1]) {
+                                    if (rawBranchName.includes(baseTarget.slice(0, 3)) && targetNumMatch[1] === sourceNumMatch[1]) {
                                         isMatch = true;
                                     }
                                 } else {
@@ -660,7 +661,8 @@
                     alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
                 } catch(err) {
                     console.error("Excel parse error:", err);
-                    alert("Error parsing Excel file. Please ensure it is a valid .xlsx, .xls or .csv sheet.");
+                    // لو حصل أي خطأ، جرب نقرأ الملف كـ Binary سادة لتجنب توقف السيستم نهائياً
+                    fallbackReadAsBinary(file);
                 }
             };
             
@@ -669,6 +671,64 @@
             };
             
             reader.readAsArrayBuffer(file);
+        }
+
+        // دالة بديلة فوريّة لو حدث أي خطأ في قراءة الـ ArrayBuffer
+        function fallbackReadAsBinary(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, {type: 'binary'});
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+
+                    let cur = shiftData[activeShiftKey];
+                    let matchedCount = 0;
+
+                    json.forEach(row => {
+                        if(row && row.length >= 2) {
+                            let rawBranchName = String(row[0] || "").trim().toLowerCase();
+                            let stockQty = row[1];
+                            if(!rawBranchName) return;
+
+                            rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
+
+                            cur.branchesList.forEach(branch => {
+                                let targetName = branch.toLowerCase().replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
+                                let targetNumMatch = targetName.match(/(?:#|\s+)?(\d+)/);
+                                let sourceNumMatch = rawBranchName.match(/(?:#|\s+)?(\d+)/);
+                                let isMatch = false;
+
+                                if (targetNumMatch && sourceNumMatch) {
+                                    let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
+                                    if (rawBranchName.includes(baseTarget.slice(0, 3)) && targetNumMatch[1] === sourceNumMatch[1]) {
+                                        isMatch = true;
+                                    }
+                                } else {
+                                    let cleanTarget = targetName.replace(/[^a-z0-9]/g, '');
+                                    let cleanSource = rawBranchName.replace(/[^a-z0-9]/g, '');
+                                    if (cleanTarget && (cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource))) {
+                                        isMatch = true;
+                                    }
+                                }
+
+                                if (isMatch) {
+                                    cur.branchStock[branch] = stockQty;
+                                    matchedCount++;
+                                }
+                            });
+                        }
+                    });
+
+                    saveShiftToCloud();
+                    renderBranches();
+                    alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
+                } catch(ex) {
+                    alert("Could not parse this file. Please save your Excel sheet as a standard CSV or .xlsx file and try again.");
+                }
+            };
+            reader.readAsBinaryString(file);
         }
 
         function renderDatabase() {
