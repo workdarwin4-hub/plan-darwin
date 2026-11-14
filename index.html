@@ -583,7 +583,6 @@
             renderBranches();
         }
 
-        // --- إصلاح زر الريسيت ليصفر المناديب، السبورت، والاستوك معاً بالكامل ---
         function resetAllocation() {
             if(confirm("Are you sure you want to clear and reset all allocations and stock data?")) {
                 let cur = shiftData[activeShiftKey];
@@ -597,7 +596,7 @@
             }
         }
 
-        // --- إصلاح فائق القوة لقراءة ملفات الإكسيل بأمان تام عبر ArrayBuffer ---
+        // --- دالة قراءة فائقة المرونة تتجاوز أي مشاكل صيغة أو خلايا مدمجة ---
         function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -607,10 +606,10 @@
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
+                    const workbook = XLSX.read(data, {type: 'array', cellDates: true, raw: true});
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
 
                     let cur = shiftData[activeShiftKey];
                     let matchedCount = 0;
@@ -1064,7 +1063,7 @@
             let cur = shiftData[activeShiftKey];
             const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]:checked');
             let selectedReps = Array.from(checkboxes).map(cb => cb.value);
-            if(selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
+            if(selectedRres = selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
             if(cur.dailyRecords.length === 0) { alert("No saved records available."); return; }
 
             let reportRows = [];
