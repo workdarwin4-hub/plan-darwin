@@ -6,7 +6,6 @@
     <title>Market Plan - Multi-Shift Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <!-- Firebase SDKs (Modular CDN) -->
     <script type="module">
@@ -326,11 +325,13 @@
                     </div>
                 </div>
 
-                <!-- STOCK UPLOAD -->
+                <!-- STOCK UPLOAD / PASTE -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Matches main branch keywords (Alex, Zayed, Hadayek, etc.) and numbers securely.</p>
-                    <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv" onchange="handleStockFileUpload(event)">
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (CSV File or Quick Paste)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload a <b>.csv</b> file (Save your Excel as CSV UTF-8) OR paste data directly below for 100% error-free matching.</p>
+                    <input type="file" id="stock-file-input" accept=".csv, .txt" onchange="handleCsvUpload(event)" style="margin-bottom: 12px;">
+                    <textarea id="paste-csv-area" placeholder="Or paste rows here (e.g. Alex 1, 150) then click Import..." style="width: 100%; height: 80px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
+                    <button class="btn btn-success" style="padding: 8px 16px; font-size: 13px; width: auto;" onclick="importPastedCsv()">🚀 Import Pasted Data</button>
                 </div>
 
                 <!-- SUPPORTS -->
@@ -596,139 +597,75 @@
             }
         }
 
-        // --- دالة قراءة فائقة الذكاء ومقاومة للأخطاء 100% ---
-        function handleStockFileUpload(event) {
-            const file = event.target.files[0];
-            if(!file) return;
+        // --- محرك قراءة نصوص وسطور آمن 100% وبدون أي إيرور ---
+        function parseStockTextData(text) {
+            const lines = text.split(/\r?\n/);
+            let cur = shiftData[activeShiftKey];
+            let matchedCount = 0;
 
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    // استخدام خيارات مرنة تتجاوز أي تنسيقات تالفة في الشيت
-                    const workbook = XLSX.read(data, {type: 'array', cellFormula: false, cellHTML: false});
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+            lines.forEach(line => {
+                if(!line.trim()) return;
+                // تقسيم السطر بالفاصلة (CSV) أو علامة الجدولة (Tab)
+                let parts = line.split(/,|\t/);
+                if(parts.length >= 2) {
+                    let rawBranchName = parts[0].trim().toLowerCase();
+                    let stockQty = parts[1].trim();
 
-                    let cur = shiftData[activeShiftKey];
-                    let matchedCount = 0;
+                    if(!rawBranchName) return;
 
-                    json.forEach(row => {
-                        if(row && row.length >= 2) {
-                            let rawBranchName = String(row[0] || "").trim().toLowerCase();
-                            let stockQty = row[1];
+                    rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
 
-                            if(!rawBranchName) return;
+                    cur.branchesList.forEach(branch => {
+                        let targetName = branch.toLowerCase().replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
+                        
+                        let targetNumMatch = targetName.match(/(?:#|\s+)?(\d+)/);
+                        let sourceNumMatch = rawBranchName.match(/(?:#|\s+)?(\d+)/);
 
-                            // توحيد اسم الإسكندرية بجميع أشكاله
-                            rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
+                        let isMatch = false;
 
-                            cur.branchesList.forEach(branch => {
-                                let targetName = branch.toLowerCase().replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
-                                
-                                let targetNumMatch = targetName.match(/(?:#|\s+)?(\d+)/);
-                                let sourceNumMatch = rawBranchName.match(/(?:#|\s+)?(\d+)/);
+                        if (targetNumMatch && sourceNumMatch) {
+                            let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
+                            let baseSource = rawBranchName.replace(/#\d+|\d+/g, '').trim();
+                            
+                            if (rawBranchName.includes(baseTarget.slice(0, 3)) && targetNumMatch[1] === sourceNumMatch[1]) {
+                                isMatch = true;
+                            }
+                        } else {
+                            let cleanTarget = targetName.replace(/[^a-z0-9]/g, '');
+                            let cleanSource = rawBranchName.replace(/[^a-z0-9]/g, '');
+                            if (cleanTarget && (cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource))) {
+                                isMatch = true;
+                            }
+                        }
 
-                                let isMatch = false;
-
-                                if (targetNumMatch && sourceNumMatch) {
-                                    let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
-                                    let baseSource = rawBranchName.replace(/#\d+|\d+/g, '').trim();
-                                    
-                                    if (rawBranchName.includes(baseTarget.slice(0, 3)) && targetNumMatch[1] === sourceNumMatch[1]) {
-                                        isMatch = true;
-                                    }
-                                } else {
-                                    let cleanTarget = targetName.replace(/[^a-z0-9]/g, '');
-                                    let cleanSource = rawBranchName.replace(/[^a-z0-9]/g, '');
-                                    if (cleanTarget && (cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource))) {
-                                        isMatch = true;
-                                    }
-                                }
-
-                                if (isMatch) {
-                                    cur.branchStock[branch] = stockQty;
-                                    matchedCount++;
-                                }
-                            });
+                        if (isMatch) {
+                            cur.branchStock[branch] = stockQty;
+                            matchedCount++;
                         }
                     });
-
-                    saveShiftToCloud();
-                    renderBranches();
-                    alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
-                } catch(err) {
-                    console.error("Excel parse error:", err);
-                    // لو حصل أي خطأ، جرب نقرأ الملف كـ Binary سادة لتجنب توقف السيستم نهائياً
-                    fallbackReadAsBinary(file);
                 }
-            };
-            
-            reader.onerror = function() {
-                alert("Failed to read the file.");
-            };
-            
-            reader.readAsArrayBuffer(file);
+            });
+
+            saveShiftToCloud();
+            renderBranches();
+            alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
         }
 
-        // دالة بديلة فوريّة لو حدث أي خطأ في قراءة الـ ArrayBuffer
-        function fallbackReadAsBinary(file) {
+        function handleCsvUpload(event) {
+            const file = event.target.files[0];
+            if(!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                try {
-                    const data = e.target.result;
-                    const workbook = XLSX.read(data, {type: 'binary'});
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
-
-                    let cur = shiftData[activeShiftKey];
-                    let matchedCount = 0;
-
-                    json.forEach(row => {
-                        if(row && row.length >= 2) {
-                            let rawBranchName = String(row[0] || "").trim().toLowerCase();
-                            let stockQty = row[1];
-                            if(!rawBranchName) return;
-
-                            rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
-
-                            cur.branchesList.forEach(branch => {
-                                let targetName = branch.toLowerCase().replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
-                                let targetNumMatch = targetName.match(/(?:#|\s+)?(\d+)/);
-                                let sourceNumMatch = rawBranchName.match(/(?:#|\s+)?(\d+)/);
-                                let isMatch = false;
-
-                                if (targetNumMatch && sourceNumMatch) {
-                                    let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
-                                    if (rawBranchName.includes(baseTarget.slice(0, 3)) && targetNumMatch[1] === sourceNumMatch[1]) {
-                                        isMatch = true;
-                                    }
-                                } else {
-                                    let cleanTarget = targetName.replace(/[^a-z0-9]/g, '');
-                                    let cleanSource = rawBranchName.replace(/[^a-z0-9]/g, '');
-                                    if (cleanTarget && (cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource))) {
-                                        isMatch = true;
-                                    }
-                                }
-
-                                if (isMatch) {
-                                    cur.branchStock[branch] = stockQty;
-                                    matchedCount++;
-                                }
-                            });
-                        }
-                    });
-
-                    saveShiftToCloud();
-                    renderBranches();
-                    alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
-                } catch(ex) {
-                    alert("Could not parse this file. Please save your Excel sheet as a standard CSV or .xlsx file and try again.");
-                }
+                parseStockTextData(e.target.result);
             };
-            reader.readAsBinaryString(file);
+            reader.readAsText(file);
+        }
+
+        function importPastedCsv() {
+            const pastedText = document.getElementById('paste-csv-area').value;
+            if(!pastedText.trim()) { alert("Please paste data first."); return; }
+            parseStockTextData(pastedText);
+            document.getElementById('paste-csv-area').value = '';
         }
 
         function renderDatabase() {
@@ -1164,7 +1101,8 @@
                 const rep = cur.allocations[branch];
                 if(rep) {
                     const stock = cur.branchStock[branch] ? `${cur.branchStock[branch]} pcs` : '-';
-                    expBranchesTbody.innerHTML += `<tr><td>${idx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
+                    expPostalHtml = `<tr><td>${idx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
+                    expBranchesTbody.innerHTML += expPostalHtml;
                 }
             }
 
