@@ -583,11 +583,13 @@
             renderBranches();
         }
 
+        // --- إصلاح زر الريسيت ليصفر المناديب، السبورت، وكميات الاستوك بالكامل ---
         function resetAllocation() {
-            if(confirm("Are you sure you want to clear and reset all current allocations?")) {
+            if(confirm("Are you sure you want to clear and reset all allocations and stock data?")) {
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
+                cur.branchStock = {};
                 saveShiftToCloud();
                 renderSupportsUI();
                 renderBranches();
@@ -595,7 +597,7 @@
             }
         }
 
-        // --- دالة ذكية ومطورة للمطابقة (تدعم الأرقام سواء بـ # أو مسافة عادية، وتدعم مطابقة اسكندرية مع Alex) ---
+        // --- إصلاح قراءة شيت الإكسيل وحماية قوية ضد الـ Errors ---
         function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -613,24 +615,23 @@
                     let matchedCount = 0;
 
                     json.forEach(row => {
-                        if(row.length >= 2) {
+                        if(row && row.length >= 2) {
                             let rawBranchName = String(row[0] || "").trim().toLowerCase();
                             let stockQty = row[1];
 
-                            // استبدال كلمة اسكندرية بـ alex لضمان التطابق التام مع الشيت
+                            if(!rawBranchName) return;
+
                             rawBranchName = rawBranchName.replace(/اسكندرية|الإسكندرية/g, 'alex');
 
                             cur.branchesList.forEach(branch => {
                                 let targetName = branch.toLowerCase().replace(/اسكندرية|الإسكندرية/g, 'alex');
                                 
-                                // استخراج الأرقام سواء كانت بعد # أو مسافة عادية (مثلا Zayed 2 أو Zayed #2 أو Alex 1)
                                 let targetNumMatch = targetName.match(/(?:#|\s+)?(\d+)/);
                                 let sourceNumMatch = rawBranchName.match(/(?:#|\s+)?(\d+)/);
 
                                 let isMatch = false;
 
                                 if (targetNumMatch && sourceNumMatch) {
-                                    // لو الاثنين فيهم أرقام، لازم الاسم الأساسي يتطابق والرقم يتطابق تماماً
                                     let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
                                     let baseSource = rawBranchName.replace(/#\d+|\d+/g, '').trim();
                                     
@@ -638,10 +639,9 @@
                                         isMatch = true;
                                     }
                                 } else {
-                                    // مطابقة عادية لو مفيش أرقام
                                     let cleanTarget = targetName.replace(/[^a-z0-9]/g, '');
                                     let cleanSource = rawBranchName.replace(/[^a-z0-9]/g, '');
-                                    if (cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource)) {
+                                    if (cleanTarget && (cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource))) {
                                         isMatch = true;
                                     }
                                 }
@@ -658,9 +658,12 @@
                     renderBranches();
                     alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
                 } catch(err) {
-                    console.error(err);
-                    alert("Error parsing Excel file.");
+                    console.error("Excel parse error:", err);
+                    alert("Error parsing Excel file. Please ensure it is a valid .xlsx or .csv sheet.");
                 }
+            };
+            reader.onerror = function() {
+                alert("Failed to read the file.");
             };
             reader.readAsArrayBuffer(file);
         }
