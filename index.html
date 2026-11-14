@@ -149,7 +149,6 @@
             font-weight: 700;
         }
 
-        .history-badge { font-size: 11px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; border-radius: 6px; display: inline-block; margin-top: 6px; }
         .stock-badge { font-size: 12px; background: rgba(59, 130, 246, 0.15); color: var(--secondary); border: 1px solid rgba(59, 130, 246, 0.3); padding: 4px 10px; border-radius: 6px; font-weight: 700; display: inline-block; }
 
         .db-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
@@ -168,7 +167,6 @@
         .export-table { width: 100%; border-collapse: collapse; margin-top: 16px; text-align: left; }
         .export-table th { background: #1e293b; color: #ffffff; padding: 12px 14px; font-size: 13px; border: 1px solid #cbd5e1; }
         .export-table td { padding: 10px 14px; border: 1px solid #e2e8f0; font-size: 13px; color: #334155; font-weight: 600; }
-        .export-table tr:nth-child(even) { background: #f8fafc; }
         
         .export-supports-section { margin-top: 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
         .export-support-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; }
@@ -206,7 +204,7 @@
         <div class="login-card">
             <h1>Market Plan</h1>
             <p>Enter your shift or admin password</p>
-            <input type="password" id="pass-input" class="login-input" placeholder="•••••">
+            <input type="password" id="pass-input" class="login-input" placeholder="•••••" onkeydown="if(event.key === 'Enter') checkLogin()">
             <button class="btn btn-pink" onclick="checkLogin()">Login</button>
             <p id="login-err" style="color: var(--danger); margin-top: 12px; font-size: 13px; display: none;">Invalid Password</p>
         </div>
@@ -254,4 +252,807 @@
         </header>
         <main>
             <div class="section-title">⚙️ Shift Passwords & Security Control</div>
-            <div class="table-responsive" style="margin-bottom:
+            <div class="table-responsive" style="margin-bottom: 32px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Shift Name</th>
+                            <th>Current Password</th>
+                            <th>Shift Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-shifts-tbody"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- APP MAIN CONTAINER -->
+    <div id="app-container">
+        <header>
+            <div class="logo-area">
+                <h2 id="shift-title-display">Market Plan</h2>
+                <span id="shift-badge" style="font-size: 12px; background: rgba(236,72,153,0.15); color: var(--pink); border: 1px solid rgba(236,72,153,0.3); padding: 2px 10px; border-radius: 6px; font-weight: 700;">Cloud Shift</span>
+            </div>
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="switchTab('allocation', this)">Branch & Stock</button>
+                <button class="tab-btn" onclick="switchTab('database', this)">Team</button>
+                <button class="tab-btn" onclick="switchTab('branches', this)">Branches</button>
+                <button class="tab-btn" onclick="switchTab('records', this)">Records</button>
+                <button class="tab-btn" onclick="toggleTheme()" style="background: var(--border); color: var(--text); border: none;">💡 Theme</button>
+                <button class="tab-btn btn-danger" style="color: white;" onclick="location.reload()">Logout</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- TAB 1: ALLOCATION, SUPPORTS & STOCK -->
+            <div id="tab-allocation" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Total Active Branches</h4>
+                        <div class="val" id="stat-total" style="color: var(--secondary);">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Covered Branches</h4>
+                        <div class="val" id="stat-covered" style="color: var(--accent);">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Conflicts / Duplicates</h4>
+                        <div class="val" id="stat-conflicts">0</div>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="search-box">
+                        <span>🔍</span>
+                        <input type="text" id="search-input" placeholder="Search by rep name, HR ID or stock..." oninput="filterBranches()">
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button class="btn btn-warning" onclick="resetAllocation()">🗑️ Reset Allocation</button>
+                        <button class="btn btn-success" onclick="saveDailyRecord()">💾 Save Today's Plan</button>
+                        <button class="btn btn-pink" onclick="exportImage()">📸 Export as Image</button>
+                    </div>
+                </div>
+
+                <!-- STOCK UPLOAD -->
+                <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel File or Screenshot Image)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload an Excel sheet or screenshot image (PNG/JPEG) of your stock quantities.</p>
+                    <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv, image/*" onchange="handleStockFileOrImageUpload(event)">
+                </div>
+
+                <!-- SUPPORTS -->
+                <div style="margin-bottom: 32px;">
+                    <div class="section-title">🍫 Daily Support Allocation</div>
+                    <div class="supports-grid">
+                        <div class="support-box">
+                            <div class="support-box-header">
+                                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 800;">🍿 Snacks Support</h4>
+                                <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('snacks')">+ Add Support</button>
+                            </div>
+                            <div class="support-items-list" id="snacks-list-container"></div>
+                        </div>
+
+                        <div class="support-box">
+                            <div class="support-box-header">
+                                <h4 style="color: var(--pink); font-size: 15px; font-weight: 800;">🍫 Chocolate Support</h4>
+                                <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('chocolate')">+ Add Support</button>
+                            </div>
+                            <div class="support-items-list" id="chocolate-list-container"></div>
+                        </div>
+
+                        <div class="support-box">
+                            <div class="support-box-header">
+                                <h4 style="color: var(--secondary); font-size: 15px; font-weight: 800;">Ambient Support OUT</h4>
+                                <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('ambient')">+ Add Support</button>
+                            </div>
+                            <div class="support-items-list" id="ambient-list-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BRANCHES -->
+                <div class="section-title">📍 Branch Representatives & Stock Quantities</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Branch Name</th>
+                                <th>Stock Qty</th>
+                                <th>Assigned Representative</th>
+                            </tr>
+                        </thead>
+                        <tbody id="branches-tbody"></tbody>
+                    </table>
+                </div>
+
+                <div style="position: absolute; left: -9999px; top: -9999px;">
+                    <div id="export-area">
+                        <div class="export-header">
+                            <h2 id="export-title-header">Market Plan - Schedule</h2>
+                            <p id="export-date-str">Date: ---</p>
+                        </div>
+                        <h3 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations & Stock</h3>
+                        <table class="export-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">#</th>
+                                    <th>Branch Name</th>
+                                    <th>Stock</th>
+                                    <th>Representative</th>
+                                </tr>
+                            </thead>
+                            <tbody id="export-branches-tbody"></tbody>
+                        </table>
+                        <div class="export-supports-section">
+                            <div class="export-support-card"><h4>🍿 Snacks Support</h4><ul id="export-snacks-ul"></ul></div>
+                            <div class="export-support-card"><h4>🍫 Chocolate Support</h4><ul id="export-chocolate-ul"></ul></div>
+                            <div class="export-support-card"><h4>Ambient Support OUT</h4><ul id="export-ambient-ul"></ul></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: DATABASE -->
+            <div id="tab-database" class="tab-content">
+                <div class="db-grid">
+                    <div class="form-card">
+                        <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--pink);">Add New Team Member</h3>
+                        <div class="form-group"><label>Full Name</label><input type="text" id="new-name" placeholder="e.g. ZIAD DARWIN"></div>
+                        <div class="form-group"><label>HR ID</label><input type="text" id="new-hr" placeholder="e.g. HR1024"></div>
+                        <button class="btn btn-pink" onclick="addTeamMember()">Add to Database</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead><tr><th>#</th><th>Name</th><th>HR ID</th><th style="width: 100px;">Action</th></tr></thead>
+                            <tbody id="db-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: BRANCHES -->
+            <div id="tab-branches" class="tab-content">
+                <div class="db-grid">
+                    <div class="form-card">
+                        <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--secondary);">Add New Branch</h3>
+                        <div class="form-group"><label>Branch Name</label><input type="text" id="new-branch-name" placeholder="Enter branch name..."></div>
+                        <button class="btn btn-success" onclick="addNewBranch()">Add Branch</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead><tr><th>#</th><th>Branch Name</th><th style="width: 100px;">Action</th></tr></thead>
+                            <tbody id="branches-mgmt-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: RECORDS -->
+            <div id="tab-records" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+                    <h3 style="font-size: 18px; color: var(--pink);">Historical Daily Records</h3>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div class="search-box" style="width: 260px;"><span>🔍</span><input type="text" id="record-search-input" placeholder="Search records..." oninput="renderRecords()"></div>
+                        <button class="btn btn-success" style="width: auto; padding: 8px 16px; font-size: 13px;" onclick="openReportModal()">📊 Export Detailed Daily Excel (.xlsx)</button>
+                    </div>
+                </div>
+                <div id="records-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let activeShiftKey = "";
+        let shiftData = {
+            morning: {
+                pass: "ziad101",
+                enabled: true,
+                title: "Morning Shift",
+                branchesList: [],
+                teamMembers: [],
+                allocations: {},
+                supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
+                branchStock: {},
+                dailyRecords: []
+            },
+            between: {
+                pass: "94531",
+                enabled: true,
+                title: "Between Shift",
+                branchesList: [
+                    "October 2", "Zayed #2", "Garden #1", "Zayed #4", "Obour #2", 
+                    "October #3", "Shorouk #3", "Shobra #1", "El zaher #1", "Hadayek Elahram", 
+                    "October #4", "New Cairo #1", "New Cairo #5", "Agouza #1", "Obour #1", 
+                    "Alex 1", "Alex 2", "Alex 3", "Mansoura 1", "Mansoura 2", "Port said"
+                ],
+                teamMembers: [],
+                allocations: {},
+                supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
+                branchStock: {},
+                dailyRecords: []
+            },
+            night: {
+                pass: "ziad102",
+                enabled: true,
+                title: "Night Shift",
+                branchesList: [],
+                teamMembers: [],
+                allocations: {},
+                supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
+                branchStock: {},
+                dailyRecords: []
+            }
+        };
+
+        let adminPass = "darwin101";
+
+        function toggleTheme() {
+            const body = document.body;
+            body.setAttribute('data-theme', body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        }
+
+        function checkLogin() {
+            const val = document.getElementById('pass-input').value.trim();
+            document.getElementById('login-err').style.display = 'none';
+
+            if(val === adminPass) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-container').style.display = 'flex';
+                initAdminPanel();
+                return;
+            }
+
+            let foundShift = null;
+            for(let key in shiftData) {
+                if(shiftData[key].pass === val) {
+                    foundShift = key;
+                    break;
+                }
+            }
+
+            if(foundShift) {
+                if(!shiftData[foundShift].enabled) {
+                    alert("This shift is currently disabled by Admin.");
+                    return;
+                }
+                activeShiftKey = foundShift;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                document.getElementById('shift-title-display').innerText = shiftData[activeShiftKey].title;
+                document.getElementById('export-title-header').innerText = `${shiftData[activeShiftKey].title} - Schedule`;
+                initFirebaseSyncForShift();
+            } else {
+                document.getElementById('login-err').style.display = 'block';
+            }
+        }
+
+        function initFirebaseSyncForShift() {
+            const dbRef = window.fbRef(window.fbDB, `shifts_data/${activeShiftKey}/`);
+            window.fbOnValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    if(data.branchesList !== undefined) shiftData[activeShiftKey].branchesList = data.branchesList;
+                    if(data.teamMembers) shiftData[activeShiftKey].teamMembers = data.teamMembers;
+                    if(data.allocations) shiftData[activeShiftKey].allocations = data.allocations;
+                    if(data.supportsAllocation) shiftData[activeShiftKey].supportsAllocation = data.supportsAllocation;
+                    if(data.branchStock) shiftData[activeShiftKey].branchStock = data.branchStock;
+                    if(data.dailyRecords) shiftData[activeShiftKey].dailyRecords = data.dailyRecords;
+                } else {
+                    saveShiftToCloud();
+                }
+                initAppUI();
+            }, (error) => {
+                console.error("Firebase sync error:", error);
+                initAppUI(); // لو حصل خطأ في الاتصال، افتح الواجهة فوراً بالبيانات المحلية
+            });
+        }
+
+        function saveShiftToCloud() {
+            window.fbSet(window.fbRef(window.fbDB, `shifts_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
+        }
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            if(btn) btn.classList.add('active');
+            if(tabId === 'records') renderRecords();
+            if(tabId === 'branches') renderBranchesManagement();
+        }
+
+        function initAppUI() {
+            const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('export-date-str').innerText = "Date: " + todayStr;
+            renderDatabase();
+            renderBranchesManagement();
+            renderSupportsUI();
+            renderBranches();
+        }
+
+        function resetAllocation() {
+            if(confirm("Are you sure you want to clear current allocations?")) {
+                let cur = shiftData[activeShiftKey];
+                cur.allocations = {};
+                cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
+                saveShiftToCloud();
+                renderSupportsUI();
+                renderBranches();
+                alert("Reset successfully!");
+            }
+        }
+
+        function handleStockFileOrImageUpload(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            if(file.type.startsWith('image/')) {
+                alert("Screenshot image uploaded successfully!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                    let cur = shiftData[activeShiftKey];
+                    let matchedCount = 0;
+
+                    json.forEach(row => {
+                        if(row.length >= 2) {
+                            let rawBranchName = String(row[0] || "").trim();
+                            let stockQty = row[1];
+
+                            cur.branchesList.forEach(branch => {
+                                let cleanTarget = branch.toLowerCase();
+                                let cleanSource = rawBranchName.toLowerCase();
+                                if(cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource)) {
+                                    cur.branchStock[branch] = stockQty;
+                                    matchedCount++;
+                                }
+                            });
+                        }
+                    });
+
+                    saveShiftToCloud();
+                    renderBranches();
+                    alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
+                } catch(err) {
+                    console.error(err);
+                    alert("Error parsing file.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderDatabase() {
+            const cur = shiftData[activeShiftKey];
+            const tbody = document.getElementById('db-tbody');
+            tbody.innerHTML = '';
+            if(cur.teamMembers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No team members added yet.</td></tr>';
+                return;
+            }
+            cur.teamMembers.forEach((member, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${member.name}</strong></td>
+                        <td><span style="background: var(--select-bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-family: monospace; color: var(--pink);">${member.hr}</span></td>
+                        <td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; width: auto;" onclick="deleteMember(${index})">Delete</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function addTeamMember() {
+            const name = document.getElementById('new-name').value.trim();
+            const hr = document.getElementById('new-hr').value.trim();
+            if(!name || !hr) { alert('Please enter both Name and HR ID'); return; }
+            shiftData[activeShiftKey].teamMembers.push({ name, hr });
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-hr').value = '';
+            saveShiftToCloud();
+            renderDatabase();
+            renderSupportsUI();
+            renderBranches();
+        }
+
+        function deleteMember(index) {
+            shiftData[activeShiftKey].teamMembers.splice(index, 1);
+            saveShiftToCloud();
+            renderDatabase();
+            renderSupportsUI();
+            renderBranches();
+        }
+
+        function renderBranchesManagement() {
+            const cur = shiftData[activeShiftKey];
+            const tbody = document.getElementById('branches-mgmt-tbody');
+            tbody.innerHTML = '';
+            if(cur.branchesList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">No branches added yet in this shift.</td></tr>';
+                return;
+            }
+            cur.branchesList.forEach((branch, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${branch}</strong></td>
+                        <td><button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; width: auto;" onclick="deleteBranch(${index})">Delete</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function addNewBranch() {
+            const name = document.getElementById('new-branch-name').value.trim();
+            if(!name) { alert('Please enter branch name'); return; }
+            shiftData[activeShiftKey].branchesList.push(name);
+            document.getElementById('new-branch-name').value = '';
+            saveShiftToCloud();
+            renderBranchesManagement();
+            renderBranches();
+        }
+
+        function deleteBranch(index) {
+            shiftData[activeShiftKey].branchesList.splice(index, 1);
+            saveShiftToCloud();
+            renderBranchesManagement();
+            renderBranches();
+        }
+
+        function addSupportItem(category) {
+            let cur = shiftData[activeShiftKey];
+            if(!cur.supportsAllocation[category]) cur.supportsAllocation[category] = [];
+            cur.supportsAllocation[category].push("");
+            saveShiftToCloud();
+            renderSupportsUI();
+        }
+
+        function updateSupportItem(category, index, val) {
+            shiftData[activeShiftKey].supportsAllocation[category][index] = val;
+            saveShiftToCloud();
+        }
+
+        function removeSupportItem(category, index) {
+            shiftData[activeShiftKey].supportsAllocation[category].splice(index, 1);
+            saveShiftToCloud();
+            renderSupportsUI();
+        }
+
+        function renderSupportsUI() {
+            let cur = shiftData[activeShiftKey];
+            ['snacks', 'chocolate', 'ambient'].forEach(cat => {
+                const container = document.getElementById(`${cat}-list-container`);
+                container.innerHTML = '';
+                const list = cur.supportsAllocation[cat] || [];
+                if(list.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">No support assigned yet.</p>';
+                    return;
+                }
+                list.forEach((personName, idx) => {
+                    let optionsHTML = '<option value="">-- Select --</option>';
+                    cur.teamMembers.forEach(m => {
+                        const sel = (m.name === personName) ? 'selected' : '';
+                        optionsHTML += `<option value="${m.name}" ${sel}>${m.name} (${m.hr})</option>`;
+                    });
+                    container.innerHTML += `
+                        <div class="support-item-row">
+                            <div style="flex: 1;">
+                                <select onchange="updateSupportItem('${cat}', ${idx}, this.value)">${optionsHTML}</select>
+                            </div>
+                            <button class="btn btn-danger" style="padding: 8px 12px; font-size: 12px; width: auto;" onclick="removeSupportItem('${cat}', ${idx})">✕</button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function renderBranches() {
+            const cur = shiftData[activeShiftKey];
+            const tbody = document.getElementById('branches-tbody');
+            tbody.innerHTML = '';
+
+            if(cur.branchesList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No branches in this shift. Add branches from Branches tab.</td></tr>';
+                document.getElementById('stat-total').innerText = 0;
+                document.getElementById('stat-covered').innerText = 0;
+                document.getElementById('stat-conflicts').innerText = 0;
+                return;
+            }
+
+            let repCounts = {};
+            cur.branchesList.forEach(branch => {
+                const rep = cur.allocations[branch] || '';
+                if(rep && rep !== "Without Rep") repCounts[rep] = (repCounts[rep] || 0) + 1;
+            });
+
+            let coveredCount = 0;
+            let conflictCount = 0;
+
+            cur.branchesList.forEach((branch, idx) => {
+                const rep = cur.allocations[branch] || '';
+                if(rep && rep !== "Without Rep") coveredCount++;
+
+                const isConflict = rep && rep !== "Without Rep" && repCounts[rep] > 1;
+                if(isConflict) conflictCount++;
+
+                const stockValue = cur.branchStock[branch] !== undefined ? `${cur.branchStock[branch]} pcs` : 'No Stock Data';
+
+                let optionsHTML = '<option value="">-- Select Representative --</option>';
+                optionsHTML += '<option value="Without Rep" ' + (rep === "Without Rep" ? 'selected' : '') + '>Without Rep</option>';
+                
+                cur.teamMembers.forEach(m => {
+                    const sel = (m.name === rep) ? 'selected' : '';
+                    optionsHTML += `<option value="${m.name}" ${sel}>${m.name} (${m.hr})</option>`;
+                });
+
+                tbody.innerHTML += `
+                    <tr class="branch-row" data-branch="${branch}" data-rep="${rep}" data-stock="${stockValue}">
+                        <td>${idx + 1}</td>
+                        <td><strong>${branch}</strong></td>
+                        <td><span class="stock-badge">📦 ${stockValue}</span></td>
+                        <td>
+                            <select class="${isConflict ? 'conflict' : ''}" onchange="updateAllocation('${branch}', this.value)">
+                                ${optionsHTML}
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('stat-total').innerText = cur.branchesList.length;
+            document.getElementById('stat-covered').innerText = coveredCount;
+            document.getElementById('stat-conflicts').innerText = conflictCount;
+        }
+
+        function updateAllocation(branch, value) {
+            shiftData[activeShiftKey].allocations[branch] = value;
+            saveShiftToCloud();
+            renderBranches();
+        }
+
+        function filterBranches() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const rows = document.querySelectorAll('.branch-row');
+            rows.forEach(row => {
+                const branchName = row.getAttribute('data-branch').toLowerCase();
+                const repName = row.getAttribute('data-rep').toLowerCase();
+                const stockVal = row.getAttribute('data-stock').toLowerCase();
+                if(branchName.includes(query) || repName.includes(query) || stockVal.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function saveDailyRecord() {
+            let cur = shiftData[activeShiftKey];
+            const todayIso = new Date().toISOString().split('T')[0];
+            const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+            
+            const recordObj = { 
+                dateStr, 
+                dateIso: todayIso, 
+                allocations: JSON.parse(JSON.stringify(cur.allocations)),
+                supports: JSON.parse(JSON.stringify(cur.supportsAllocation)),
+                branchStock: JSON.parse(JSON.stringify(cur.branchStock))
+            };
+            
+            const existingIndex = cur.dailyRecords.findIndex(r => r.dateIso === todayIso);
+            if(existingIndex >= 0) {
+                cur.dailyRecords[existingIndex] = recordObj;
+            } else {
+                cur.dailyRecords.unshift(recordObj);
+            }
+
+            saveShiftToCloud();
+            alert("Today's plan successfully saved!");
+        }
+
+        function renderRecords() {
+            let cur = shiftData[activeShiftKey];
+            const container = document.getElementById('records-container');
+            container.innerHTML = '';
+            
+            const query = (document.getElementById('record-search-input')?.value || '').toLowerCase();
+            const filteredRecords = cur.dailyRecords.filter(rec => rec.dateStr.toLowerCase().includes(query) || rec.dateIso.includes(query));
+
+            if(filteredRecords.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted);">No matching records found.</p>';
+                return;
+            }
+
+            filteredRecords.forEach((rec, idx) => {
+                const originalIndex = cur.dailyRecords.indexOf(rec);
+                container.innerHTML += `
+                    <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <h4 style="color: var(--pink); font-size: 16px; margin-bottom: 4px;">📅 Date: ${rec.dateStr}</h4>
+                            <p style="color: var(--text-muted); font-size: 13px;">Locked snapshot with branch allocations and stock quantities.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" style="padding: 8px 16px; font-size: 13px; width: auto;" onclick="viewRecordSnapshot(${originalIndex})">👁️ View</button>
+                            <button class="btn btn-danger" style="padding: 8px 16px; font-size: 13px; width: auto;" onclick="deleteRecord(${originalIndex})">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function viewRecordSnapshot(idx) {
+            let cur = shiftData[activeShiftKey];
+            const rec = cur.dailyRecords[idx];
+            document.getElementById('modal-title').innerText = `Snapshot - ${rec.dateStr}`;
+            
+            let branchesHtml = '';
+            let bIdx = 1;
+            for(let branch in rec.allocations) {
+                const rep = rec.allocations[branch] || 'Without Rep';
+                const stock = rec.branchStock?.[branch] ? `${rec.branchStock[branch]} pcs` : '-';
+                branchesHtml += `<tr><td>${bIdx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
+            }
+
+            const contentHtml = `
+                <h4 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations & Stock</h4>
+                <table class="export-table">
+                    <thead><tr><th>#</th><th>Branch Name</th><th>Stock</th><th>Representative</th></tr></thead>
+                    <tbody>${branchesHtml}</tbody>
+                </table>
+            `;
+            document.getElementById('modal-body-content').innerHTML = contentHtml;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function closeModal(e) { document.getElementById('modal-overlay').style.display = 'none'; }
+        function closeModalForce() { document.getElementById('modal-overlay').style.display = 'none'; }
+
+        function deleteRecord(idx) {
+            shiftData[activeShiftKey].dailyRecords.splice(idx, 1);
+            saveShiftToCloud();
+            renderRecords();
+        }
+
+        function initAdminPanel() {
+            const adminRef = window.fbRef(window.fbDB, 'shifts_data/');
+            window.fbOnValue(adminRef, (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    if(data.morning) shiftData.morning = data.morning;
+                    if(data.between) shiftData.between = data.between;
+                    if(data.night) shiftData.night = data.night;
+                }
+                renderAdminTable();
+            });
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('admin-shifts-tbody');
+            tbody.innerHTML = '';
+            ['morning', 'between', 'night'].forEach(key => {
+                let sh = shiftData[key];
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${sh.title}</strong> (${key})</td>
+                        <td><input type="text" id="admin-pass-${key}" value="${sh.pass}" style="width: 150px;"></td>
+                        <td><input type="checkbox" id="admin-en-${key}" ${sh.enabled ? 'checked' : ''} style="width: 20px; height: 20px;"> Enabled</td>
+                        <td><button class="btn btn-success" style="padding: 6px 14px; font-size: 12px; width: auto;" onclick="updateShiftConfig('${key}')">Save Changes</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateShiftConfig(key) {
+            const newPass = document.getElementById(`admin-pass-${key}`).value.trim();
+            const newEn = document.getElementById(`admin-en-${key}`).checked;
+            shiftData[key].pass = newPass;
+            shiftData[key].enabled = newEn;
+            window.fbSet(window.fbRef(window.fbDB, `shifts_data/${key}/`), shiftData[key]);
+            alert(`Shift ${key} updated successfully!`);
+        }
+
+        function openReportModal() {
+            let cur = shiftData[activeShiftKey];
+            const container = document.getElementById('report-checkboxes-container');
+            container.innerHTML = '';
+            if(cur.teamMembers.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No team members found.</p>';
+                return;
+            }
+            cur.teamMembers.forEach(m => {
+                container.innerHTML += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="report-rep-checkbox" value="${m.name}">
+                        <span><strong>${m.name}</strong> (${m.hr})</span>
+                    </label>
+                `;
+            });
+            document.getElementById('report-modal-overlay').style.display = 'flex';
+        }
+
+        function closeReportModal(e) { document.getElementById('report-modal-overlay').style.display = 'none'; }
+        function closeReportModalForce() { document.getElementById('report-modal-overlay').style.display = 'none'; }
+
+        function toggleSelectAllReps(btn) {
+            const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+        }
+
+        function generateMonthlyExcelReport() {
+            let cur = shiftData[activeShiftKey];
+            const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]:checked');
+            let selectedReps = Array.from(checkboxes).map(cb => cb.value);
+            if(selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
+            if(cur.dailyRecords.length === 0) { alert("No saved records available."); return; }
+
+            let reportRows = [];
+            cur.dailyRecords.forEach(rec => {
+                let repAssignments = {};
+                for(let branch in rec.allocations) {
+                    let rep = rec.allocations[branch];
+                    if(rep && rep !== "Without Rep") {
+                        if(!repAssignments[rep]) repAssignments[rep] = [];
+                        let stock = rec.branchStock?.[branch] ? ` (${rec.branchStock[branch]} pcs)` : '';
+                        repAssignments[rep].push(`Branch: ${branch}${stock}`);
+                    }
+                }
+                selectedReps.forEach(repName => {
+                    let status = "Not Assigned / Off";
+                    if(repAssignments[repName] && repAssignments[repName].length > 0) {
+                        status = repAssignments[repName].join(" + ");
+                    }
+                    reportRows.push({ "Date": rec.dateStr, "Representative Name": repName, "Daily Status / Location & Stock": status });
+                });
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(reportRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Shift Daily Report");
+            XLSX.writeFile(workbook, `Shift_Report_${activeShiftKey}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            closeReportModalForce();
+            alert("Report generated successfully!");
+        }
+
+        function exportImage() {
+            let cur = shiftData[activeShiftKey];
+            const expBranchesTbody = document.getElementById('export-branches-tbody');
+            expBranchesTbody.innerHTML = '';
+            let idx = 1;
+            for(let branch in cur.allocations) {
+                const rep = cur.allocations[branch];
+                if(rep) {
+                    const stock = cur.branchStock[branch] ? `${cur.branchStock[branch]} pcs` : '-';
+                    expBranchesTbody.innerHTML += `<tr><td>${idx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
+                }
+            }
+
+            ['snacks', 'chocolate', 'ambient'].forEach(cat => {
+                const ul = document.getElementById(`export-${cat}-ul`);
+                if (!ul) return;
+                ul.innerHTML = '';
+                const list = cur.supportsAllocation[cat] || [];
+                const validList = list.filter(item => item && item.trim() !== "");
+                ul.innerHTML = validList.length === 0 ? '<li>None</li>' : validList.map(name => `<li>${name}</li>`).join('');
+            });
+
+            const area = document.getElementById('export-area');
+            html2canvas(area, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Market_Plan_${activeShiftKey}_${new Date().toISOString().split('T')[0]}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
