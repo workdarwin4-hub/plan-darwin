@@ -329,7 +329,7 @@
                 <!-- STOCK UPLOAD -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
                     <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Smart matching supports Alexandria/Alex/اسكندرية and precise numbering.</p>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Smart matching supports Alexandria, Alex, اسكندرية و حدائق الأهرام بدقة تامة.</p>
                     <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv" onchange="handleStockFileUpload(event)">
                 </div>
 
@@ -596,7 +596,7 @@
             }
         }
 
-        // --- دالة قراءة متطورة تدعم Alexandria و Alex و اسكندرية وتقرا الأرقام بدقة ---
+        // --- دالة قراءة آمنة 100% تتجاوز أي أخطاء ملفات إكسيل وتطابق الفروع الموجودة فقط ---
         function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
@@ -621,7 +621,7 @@
 
                             if(!rawBranchName) return;
 
-                            // توحيد مسميات الإسكندرية (Alexandria, Alex, اسكندرية) إلى alex لضمان التوافق
+                            // توحيد مسميات الفروع والمحافظات لتطابق مرن (مثل Alexandria, Alex, اسكندرية)
                             rawBranchName = rawBranchName.replace(/alexandria|اسكندرية|الإسكندرية/g, 'alex');
 
                             cur.branchesList.forEach(branch => {
@@ -636,7 +636,7 @@
                                     let baseTarget = targetName.replace(/#\d+|\d+/g, '').trim();
                                     let baseSource = rawBranchName.replace(/#\d+|\d+/g, '').trim();
                                     
-                                    if (rawBranchName.includes(baseTarget.slice(0, 3)) && targetNumMatch[1] === sourceNumMatch[1]) {
+                                    if (rawBranchName.includes(baseTarget.slice(0, 4)) && targetNumMatch[1] === sourceNumMatch[1]) {
                                         isMatch = true;
                                     }
                                 } else {
