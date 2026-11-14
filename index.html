@@ -239,7 +239,7 @@
         </div>
     </div>
 
-    <!-- MASTER ADMIN DASHBOARD -->
+    <!-- MASTER ADMIN DASHBOARD ( darwin101 ) -->
     <div id="admin-container">
         <header>
             <div class="logo-area">
@@ -265,6 +265,9 @@
                     <tbody id="admin-shifts-tbody"></tbody>
                 </table>
             </div>
+
+            <div class="section-title">📂 Global Records Review Across All Shifts</div>
+            <div id="admin-records-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
         </main>
     </div>
 
@@ -315,11 +318,11 @@
                     </div>
                 </div>
 
-                <!-- STOCK UPLOAD (Excel & Images) -->
+                <!-- STOCK UPLOAD -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet or Image Screenshot)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet or screenshot image. For instant automated mapping, Excel files (.xlsx) provide exact data instantly. Images will store securely locally and sync counts.</p>
-                    <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv, image/*" onchange="handleStockFileOrImageUpload(event)">
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .csv) containing branch names and stock quantities to automatically sync counts.</p>
+                    <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv" onchange="handleStockFileUpload(event)">
                 </div>
 
                 <!-- SUPPORTS -->
@@ -572,8 +575,9 @@
             renderBranches();
         }
 
+        // --- إصلاح زر الريسيت لتصفير التوزيعات بالكامل ---
         function resetAllocation() {
-            if(confirm("Are you sure you want to clear current allocations?")) {
+            if(confirm("Are you sure you want to clear and reset all current allocations?")) {
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
@@ -584,21 +588,10 @@
             }
         }
 
-        // --- دالة معالجة رفع الملفات أو الصور (تدعم الاثنين بكفاءة لتفادي ضياع البيانات) ---
-        function handleStockFileOrImageUpload(event) {
+        // --- إصلاح قراءة شيت الإكسيل وسحب الأرقام بدقة ---
+        function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
-
-            if(file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    // حفظ معاينة الصورة محلياً في متصفح المستخدم لكي تظل ظاهرة ودعم رفعها بسلاسة
-                    localStorage.setItem(`last_stock_img_${activeShiftKey}`, e.target.result);
-                    alert("Image screenshot uploaded successfully! Note: For instant automated stock numbers mapping across branches, standard Excel (.xlsx) files are recommended.");
-                };
-                reader.readAsDataURL(file);
-                return;
-            }
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -618,8 +611,8 @@
                             let stockQty = row[1];
 
                             cur.branchesList.forEach(branch => {
-                                let cleanTarget = branch.toLowerCase();
-                                let cleanSource = rawBranchName.toLowerCase();
+                                let cleanTarget = branch.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                let cleanSource = rawBranchName.toLowerCase().replace(/[^a-z0-9]/g, '');
                                 if(cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource)) {
                                     cur.branchStock[branch] = stockQty;
                                     matchedCount++;
@@ -716,8 +709,10 @@
             renderBranches();
         }
 
+        // --- إصلاح زراير السبورت بالكامل ---
         function addSupportItem(category) {
             let cur = shiftData[activeShiftKey];
+            if(!cur.supportsAllocation) cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
             if(!cur.supportsAllocation[category]) cur.supportsAllocation[category] = [];
             cur.supportsAllocation[category].push("");
             saveShiftToCloud();
@@ -725,36 +720,48 @@
         }
 
         function updateSupportItem(category, index, val) {
-            shiftData[activeShiftKey].supportsAllocation[category][index] = val;
+            let cur = shiftData[activeShiftKey];
+            if(!cur.supportsAllocation) cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
+            cur.supportsAllocation[category][index] = val;
             saveShiftToCloud();
         }
 
         function removeSupportItem(category, index) {
-            shiftData[activeShiftKey].supportsAllocation[category].splice(index, 1);
+            let cur = shiftData[activeShiftKey];
+            if(!cur.supportsAllocation) cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
+            cur.supportsAllocation[category].splice(index, 1);
             saveShiftToCloud();
             renderSupportsUI();
         }
 
         function renderSupportsUI() {
             let cur = shiftData[activeShiftKey];
+            if(!cur.supportsAllocation) cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
+            
             ['snacks', 'chocolate', 'ambient'].forEach(cat => {
                 const container = document.getElementById(`${cat}-list-container`);
+                if(!container) return;
                 container.innerHTML = '';
                 const list = cur.supportsAllocation[cat] || [];
+                
                 if(list.length === 0) {
                     container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">No support assigned yet.</p>';
                     return;
                 }
+
                 list.forEach((personName, idx) => {
                     let optionsHTML = '<option value="">-- Select --</option>';
                     cur.teamMembers.forEach(m => {
                         const sel = (m.name === personName) ? 'selected' : '';
                         optionsHTML += `<option value="${m.name}" ${sel}>${m.name} (${m.hr})</option>`;
                     });
+
                     container.innerHTML += `
                         <div class="support-item-row">
                             <div style="flex: 1;">
-                                <select onchange="updateSupportItem('${cat}', ${idx}, this.value)">${optionsHTML}</select>
+                                <select onchange="updateSupportItem('${cat}', ${idx}, this.value)">
+                                    ${optionsHTML}
+                                </select>
                             </div>
                             <button class="btn btn-danger" style="padding: 8px 12px; font-size: 12px; width: auto;" onclick="removeSupportItem('${cat}', ${idx})">✕</button>
                         </div>
@@ -929,6 +936,7 @@
             renderRecords();
         }
 
+        // --- إصلاح لوحة تحكم الأدمن بالكامل (تغيير الباسورد، تفعيل/إيقاف، وسجلات الشفتات) ---
         function initAdminPanel() {
             const adminRef = window.fbRef(window.fbDB, 'shifts_data/');
             window.fbOnValue(adminRef, (snapshot) => {
@@ -939,6 +947,7 @@
                     if(data.night) shiftData.night = data.night;
                 }
                 renderAdminTable();
+                renderAdminRecords();
             });
         }
 
@@ -965,6 +974,25 @@
             shiftData[key].enabled = newEn;
             window.fbSet(window.fbRef(window.fbDB, `shifts_data/${key}/`), shiftData[key]);
             alert(`Shift ${key} updated successfully!`);
+        }
+
+        function renderAdminRecords() {
+            const container = document.getElementById('admin-records-container');
+            container.innerHTML = '';
+            
+            ['morning', 'between', 'night'].forEach(key => {
+                let sh = shiftData[key];
+                let recordsCount = (sh.dailyRecords || []).length;
+                container.innerHTML += `
+                    <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 style="color: var(--secondary); font-size: 16px; margin-bottom: 4px;">${sh.title} (${key})</h4>
+                            <p style="color: var(--text-muted); font-size: 13px;">Status: ${sh.enabled ? 'Active' : 'Disabled'} | Saved Records: ${recordsCount}</p>
+                        </div>
+                        <span class="stock-badge">Password: ${sh.pass}</span>
+                    </div>
+                `;
+            });
         }
 
         function openReportModal() {
@@ -1047,8 +1075,8 @@
                 const ul = document.getElementById(`export-${cat}-ul`);
                 if (!ul) return;
                 ul.innerHTML = '';
-                const list = cur.supportsAllocation[cat] || [];
-                const validList = list.filter(item => item && item.trim() !== "");
+                let supList = cur.supportsAllocation?.[cat] || [];
+                const validList = supList.filter(item => item && item.trim() !== "");
                 ul.innerHTML = validList.length === 0 ? '<li>None</li>' : validList.map(name => `<li>${name}</li>`).join('');
             });
 
