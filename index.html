@@ -144,7 +144,7 @@
         th { background: var(--select-bg); color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
         tr:hover { background: rgba(100,100,100,0.03); }
         
-        select, input[type="text"], input[type="file"] {
+        select, input[type="text"], input[type="number"] {
             width: 100%; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px;
             border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s;
         }
@@ -156,8 +156,6 @@
             color: var(--text) !important;
             font-weight: 700;
         }
-
-        .stock-badge { font-size: 12px; background: rgba(59, 130, 246, 0.15); color: var(--secondary); border: 1px solid rgba(59, 130, 246, 0.3); padding: 4px 10px; border-radius: 6px; font-weight: 700; display: inline-block; }
 
         .db-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
         .form-card { background: var(--card-bg); border: 1px solid var(--border); padding: 24px; border-radius: 14px; height: fit-content; }
@@ -317,22 +315,13 @@
                 <div class="toolbar">
                     <div class="search-box">
                         <span>🔍</span>
-                        <input type="text" id="search-input" placeholder="Search by rep name, HR ID or stock..." oninput="filterBranches()">
+                        <input type="text" id="search-input" placeholder="Search by rep name, HR ID..." oninput="filterBranches()">
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <button class="btn btn-warning" onclick="resetAllocation()">🗑️ Reset Allocation</button>
                         <button class="btn btn-success" onclick="saveDailyRecord()">💾 Save Today's Plan</button>
                         <button class="btn btn-pink" onclick="exportImage()">📸 Export as Image</button>
                     </div>
-                </div>
-
-                <!-- STOCK UPLOAD / PASTE -->
-                <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Direct Sheet Matcher)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">ألصق بيانات الشيت (مثل KAT/OUT Hadayek El Ahram FP #1 أو 6th of October) هنا. السيستم هيطابق فروع الشفت الحالي ويسحب كل أرقام الاستوك بالكامل فوراً!</p>
-                    <input type="file" id="stock-file-input" accept=".csv, .txt" onchange="handleCsvUpload(event)" style="margin-bottom: 12px;">
-                    <textarea id="paste-csv-area" placeholder="KAT/OUT Hadayek El Ahram FP #1    5,849&#10;KAT/OUT 6th of October FP #2    5,659" style="width: 100%; height: 100px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
-                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وسحب الأرقام بدقة تامة</button>
                 </div>
 
                 <!-- SUPPORTS -->
@@ -366,14 +355,14 @@
                 </div>
 
                 <!-- BRANCHES -->
-                <div class="section-title">📍 Branch Representatives & Stock Quantities</div>
+                <div class="section-title">📍 Branch Stock Quantities & Representatives</div>
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#</th>
                                 <th>Branch Name</th>
-                                <th>Stock Qty</th>
+                                <th style="width: 200px;">Stock Qty (Manual Input)</th>
                                 <th>Assigned Representative</th>
                             </tr>
                         </thead>
@@ -598,86 +587,10 @@
             }
         }
 
-        // --- محرك مطابقة ذكي موجه لنسق أسماء الفروع الكبيرة (KAT/OUT ...) ---
-        function parseStockTextData(text) {
-            try {
-                const lines = text.split(/\r?\n/);
-                let cur = shiftData[activeShiftKey];
-                let matchedCount = 0;
-
-                lines.forEach(line => {
-                    let cleanLine = line.trim();
-                    if(!cleanLine || cleanLine.toLowerCase().includes("grand total") || cleanLine.toLowerCase().includes("row labels")) return;
-
-                    // تقسيم السطر بالـ Tab أو المسافات المتعددة
-                    let parts = cleanLine.split(/\t+|\s{2,}/);
-                    if(parts.length < 2) {
-                        // محاولة بديلة لو الفواصل مسافات عادية
-                        let lastSpaceIdx = cleanLine.lastIndexOf(" ");
-                        if(lastSpaceIdx === -1) return;
-                        parts = [cleanLine.substring(0, lastSpaceIdx).trim(), cleanLine.substring(lastSpaceIdx).trim()];
-                    }
-
-                    let rawBranchName = parts[0].trim();
-                    let stockQty = parts[parts.length - 1].trim();
-
-                    if(!rawBranchName || !stockQty) return;
-
-                    // تنظيف وتوحيد نص الفرع القادم من الشيت وفروع السيستم للمقارنة المؤكدة
-                    let sheetNameClean = rawBranchName.toLowerCase()
-                        .replace(/kat\/out\s*/g, '')
-                        .replace(/fp\s*#?/g, '')
-                        .replace(/hadayek el ahram|hadayek elahram|hadaeq|حدائق الأهرام/g, 'hadayek')
-                        .replace(/6th of october|october/g, 'october')
-                        .replace(/sheikh zayed city|zayed/g, 'zayed')
-                        .replace(/shobra|shobra/g, 'shobra')
-                        .replace(/[^a-z0-9]/g, '');
-
-                    let matchedBranch = cur.branchesList.find(b => {
-                        let sysNameClean = b.toLowerCase()
-                            .replace(/hadayek elahram|hadayek|hadaeq|حدائق الأهرام/g, 'hadayek')
-                            .replace(/october/g, 'october')
-                            .replace(/zayed/g, 'zayed')
-                            .replace(/shobra/g, 'shobra')
-                            .replace(/[^a-z0-9]/g, '');
-
-                        // مقارنة ذكية: هل الكلمات الأساسية والرقم متطابقين؟
-                        return sheetNameClean.includes(sysNameClean) || sysNameClean.includes(sheetNameClean);
-                    });
-
-                    if(matchedBranch) {
-                        cur.branchStock[matchedBranch] = stockQty;
-                        matchedCount++;
-                    }
-                });
-
-                saveShiftToCloud();
-                renderBranches();
-                alert(`✅ تم بنجاح سحب وتحديث استوك ${matchedCount} فرع لشفت ${cur.title}!`);
-            } catch(err) {
-                console.error(err);
-                alert("حدث خطأ أثناء قراءة البيانات، تأكد من صحة النسخ.");
-            }
-        }
-
-        function handleCsvUpload(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                parseStockTextData(e.target.result);
-            };
-            reader.readAsText(file);
-        }
-
-        function importPastedCsv() {
-            const pastedText = document.getElementById('paste-csv-area').value;
-            if(!pastedText.trim()) { 
-                alert("برجاء لصق بيانات الاستوك أولاً في المربع!"); 
-                return; 
-            }
-            parseStockTextData(pastedText);
-            document.getElementById('paste-csv-area').value = '';
+        function updateStockQuantity(branch, value) {
+            let cur = shiftData[activeShiftKey];
+            cur.branchStock[branch] = value;
+            saveShiftToCloud();
         }
 
         function renderDatabase() {
@@ -849,7 +762,7 @@
                 const isConflict = rep && rep !== "Without Rep" && repCounts[rep] > 1;
                 if(isConflict) conflictCount++;
 
-                const stockValue = cur.branchStock[branch] !== undefined ? `${cur.branchStock[branch]} pcs` : 'No Stock Data';
+                const stockVal = cur.branchStock[branch] !== undefined ? cur.branchStock[branch] : '';
 
                 let optionsHTML = '<option value="">-- Select Representative --</option>';
                 optionsHTML += '<option value="Without Rep" ' + (rep === "Without Rep" ? 'selected' : '') + '>Without Rep</option>';
@@ -860,10 +773,12 @@
                 });
 
                 tbody.innerHTML += `
-                    <tr class="branch-row" data-branch="${branch}" data-rep="${rep}" data-stock="${stockValue}">
+                    <tr class="branch-row" data-branch="${branch}" data-rep="${rep}">
                         <td>${idx + 1}</td>
                         <td><strong>${branch}</strong></td>
-                        <td><span class="stock-badge">📦 ${stockValue}</span></td>
+                        <td>
+                            <input type="text" value="${stockVal}" placeholder="Enter stock..." oninput="updateStockQuantity('${branch}', this.value)">
+                        </td>
                         <td>
                             <select class="${isConflict ? 'conflict' : ''}" onchange="updateAllocation('${branch}', this.value)">
                                 ${optionsHTML}
@@ -890,8 +805,7 @@
             rows.forEach(row => {
                 const branchName = row.getAttribute('data-branch').toLowerCase();
                 const repName = row.getAttribute('data-rep').toLowerCase();
-                const stockVal = row.getAttribute('data-stock').toLowerCase();
-                if(branchName.includes(query) || repName.includes(query) || stockVal.includes(query)) {
+                if(branchName.includes(query) || repName.includes(query)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
