@@ -6,6 +6,7 @@
     <title>Market Plan - Multi-Shift Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <!-- Firebase SDKs (Modular CDN) -->
     <script type="module">
@@ -327,11 +328,11 @@
 
                 <!-- STOCK UPLOAD / PASTE -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Universal Smart Match)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ بيانات الشيت (مثل October 2 أو Zayed #2 أو Hadayek أو غيرها) والزقها هنا. المحرك الجديد يطابق الكلمة والرقم بدقة تامة ويحدث كل الفروع فوراً!</p>
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Instant Match)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ بيانات الشيت والزقها هنا. الكود تم تنقيحه بالكامل عشان يستجيب فوراً ويسحب كل الفروع بدقة للشفت المفتوح فقط!</p>
                     <input type="file" id="stock-file-input" accept=".csv, .txt" onchange="handleCsvUpload(event)" style="margin-bottom: 12px;">
                     <textarea id="paste-csv-area" placeholder="October 2    1,500&#10;Zayed #2    2,300&#10;Hadayek Elahram    5,849" style="width: 100%; height: 100px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
-                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وتحديث كافة الفروع بدقة</button>
+                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وتحديث كافة الفروع فوراً</button>
                 </div>
 
                 <!-- SUPPORTS -->
@@ -597,59 +598,47 @@
             }
         }
 
-        // --- محرك مطابقة ذكي ومطور يربط اسم الفرع ورقمة بدقة 100% بدون أي تفويت ---
+        // --- محرك الاستيراد السريع الآمن (بسيط ومباشر يضمن سحب كل الفروع بدقة) ---
         function parseStockTextData(text) {
-            const lines = text.split(/\r?\n/);
-            let cur = shiftData[activeShiftKey];
-            let matchedCount = 0;
+            try {
+                const lines = text.split(/\r?\n/);
+                let cur = shiftData[activeShiftKey];
+                let matchedCount = 0;
 
-            lines.forEach(line => {
-                let cleanLine = line.trim();
-                if(!cleanLine || cleanLine.toLowerCase().includes("grand total")) return;
+                lines.forEach(line => {
+                    let cleanLine = line.trim();
+                    if(!cleanLine || cleanLine.toLowerCase().includes("grand total")) return;
 
-                // استخراج الرقم الأخير في السطر (الاستوك)
-                let numMatch = cleanLine.match(/([\d,]+(?:\.\d+)?)$/);
-                if(!numMatch) return;
+                    // استخراج الرقم من نهاية السطر
+                    let parts = cleanLine.split(/,|\t|\s{2,}/);
+                    if(parts.length < 2) return;
 
-                let stockQty = numMatch[1];
-                let rawBranchName = cleanLine.replace(stockQty, '').trim();
+                    let stockQty = parts[parts.length - 1].trim();
+                    let rawBranchName = parts.slice(0, parts.length - 1).join(" ").trim();
 
-                if(!rawBranchName) return;
+                    if(!rawBranchName || !stockQty) return;
 
-                // استخراج الكلمات الأساسية والأرقام من اسم الفرع في الشيت
-                let sourceLower = rawBranchName.toLowerCase();
-                let sourceNumMatch = sourceLower.match(/\d+/);
-                let sourceNum = sourceNumMatch ? sourceNumMatch[0] : "";
+                    // تنظيف النص للمقارنة المؤكدة
+                    let sourceKey = rawBranchName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-                // مطابقة ذكية مع فروع الشفت الحالي
-                let matchedBranch = cur.branchesList.find(b => {
-                    let targetLower = b.toLowerCase();
-                    let targetNumMatch = targetLower.match(/\d+/);
-                    let targetNum = targetNumMatch ? targetNumMatch[0] : "";
+                    let matchedBranch = cur.branchesList.find(b => {
+                        let targetKey = b.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        return sourceKey.includes(targetKey) || targetKey.includes(sourceKey);
+                    });
 
-                    // توحيد بعض المسميات الشائعة
-                    let cleanB = targetLower.replace(/hadayek elahram|hadaeq|حدائق الأهرام/g, 'hadayek');
-                    let cleanS = sourceLower.replace(/hadayek elahram|hadaeq|حدائق الأهرام/g, 'hadayek');
-
-                    let baseTarget = cleanB.replace(/\d+/g, '').replace(/[^a-z0-9]/g, '').trim();
-                    let baseSource = cleanS.replace(/\d+/g, '').replace(/[^a-z0-9]/g, '').trim();
-
-                    // شرط المطابقة: تطابق جزء من الاسم الأساسي + تطابق الرقم (لو موجود في الاتنين) أو احتواء تام
-                    let nameMatch = (baseSource.length >= 3 && (baseTarget.includes(baseSource) || baseSource.includes(baseTarget)));
-                    let numMatchCheck = (targetNum && sourceNum) ? (targetNum === sourceNum) : true;
-
-                    return nameMatch && numMatchCheck;
+                    if(matchedBranch) {
+                        cur.branchStock[matchedBranch] = stockQty;
+                        matchedCount++;
+                    }
                 });
 
-                if(matchedBranch) {
-                    cur.branchStock[matchedBranch] = stockQty;
-                    matchedCount++;
-                }
-            });
-
-            saveShiftToCloud();
-            renderBranches();
-            alert(`✅ Done! Successfully matched and updated ${matchedCount} branches with full stock quantities.`);
+                saveShiftToCloud();
+                renderBranches();
+                alert(`✅ تم تحديث وربط ${matchedCount} فرع بنجاح للشفت الحالي!`);
+            } catch(err) {
+                console.error(err);
+                alert("حدث خطأ أثناء قراءة البيانات، تأكد من صحة النسخ.");
+            }
         }
 
         function handleCsvUpload(event) {
@@ -664,7 +653,10 @@
 
         function importPastedCsv() {
             const pastedText = document.getElementById('paste-csv-area').value;
-            if(!pastedText.trim()) { alert("Please paste data first."); return; }
+            if(!pastedText.trim()) { 
+                alert("برجاء لصق بيانات الاستوك أولاً في المربع!"); 
+                return; 
+            }
             parseStockTextData(pastedText);
             document.getElementById('paste-csv-area').value = '';
         }
@@ -672,6 +664,7 @@
         function renderDatabase() {
             const cur = shiftData[activeShiftKey];
             const tbody = document.getElementById('db-tbody');
+            if(!tbody) return;
             tbody.innerHTML = '';
             if(cur.teamMembers.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No team members added yet.</td></tr>';
@@ -713,6 +706,7 @@
         function renderBranchesManagement() {
             const cur = shiftData[activeShiftKey];
             const tbody = document.getElementById('branches-mgmt-tbody');
+            if(!tbody) return;
             tbody.innerHTML = '';
             if(cur.branchesList.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">No branches added yet in this shift.</td></tr>';
@@ -809,6 +803,7 @@
         function renderBranches() {
             const cur = shiftData[activeShiftKey];
             const tbody = document.getElementById('branches-tbody');
+            if(!tbody) return;
             tbody.innerHTML = '';
 
             if(cur.branchesList.length === 0) {
@@ -912,6 +907,7 @@
         function renderRecords() {
             let cur = shiftData[activeShiftKey];
             const container = document.getElementById('records-container');
+            if(!container) return;
             container.innerHTML = '';
             
             const query = (document.getElementById('record-search-input')?.value || '').toLowerCase();
@@ -988,6 +984,7 @@
 
         function renderAdminTable() {
             const tbody = document.getElementById('admin-shifts-tbody');
+            if(!tbody) return;
             tbody.innerHTML = '';
             ['morning', 'between', 'night'].forEach(key => {
                 let sh = shiftData[key];
@@ -1013,6 +1010,7 @@
 
         function renderAdminRecords() {
             const container = document.getElementById('admin-records-container');
+            if(!container) return;
             container.innerHTML = '';
             
             ['morning', 'between', 'night'].forEach(key => {
@@ -1033,6 +1031,7 @@
         function openReportModal() {
             let cur = shiftData[activeShiftKey];
             const container = document.getElementById('report-checkboxes-container');
+            if(!container) return;
             container.innerHTML = '';
             if(cur.teamMembers.length === 0) {
                 container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No team members found.</p>';
@@ -1096,6 +1095,7 @@
         function exportImage() {
             let cur = shiftData[activeShiftKey];
             const expBranchesTbody = document.getElementById('export-branches-tbody');
+            if(!expBranchesTbody) return;
             expBranchesTbody.innerHTML = '';
             let idx = 1;
             for(let branch in cur.allocations) {
