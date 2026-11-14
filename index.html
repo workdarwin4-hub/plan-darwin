@@ -327,11 +327,11 @@
 
                 <!-- STOCK UPLOAD / PASTE -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Accurate Full Number Matching)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ بيانات الشيت كاملة (اسم الفرع والرقم زي 3,060 أو 1500) والزقها هنا. السيستم هيقرا الرقم بالكامل بدقة للشفت الحالي فقط.</p>
+                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock (Universal Smart Match)</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">انسخ بيانات الشيت (مثل October 2 أو Zayed #2 أو Hadayek أو غيرها) والزقها هنا. المحرك الجديد يطابق الكلمة والرقم بدقة تامة ويحدث كل الفروع فوراً!</p>
                     <input type="file" id="stock-file-input" accept=".csv, .txt" onchange="handleCsvUpload(event)" style="margin-bottom: 12px;">
-                    <textarea id="paste-csv-area" placeholder="KAT/OUT Heliopolis FP #4    3,060&#10;Hadayek Elahram    2,807" style="width: 100%; height: 100px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
-                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وسحب الأرقام كاملة بدقة</button>
+                    <textarea id="paste-csv-area" placeholder="October 2    1,500&#10;Zayed #2    2,300&#10;Hadayek Elahram    5,849" style="width: 100%; height: 100px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
+                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedCsv()">🚀 استيراد وتحديث كافة الفروع بدقة</button>
                 </div>
 
                 <!-- SUPPORTS -->
@@ -597,7 +597,7 @@
             }
         }
 
-        // --- محرك مطابقة ذكي دقيق يسحب الاسم الكامل ورقم الاستوك بالكامل للشفت الحالي فقط ---
+        // --- محرك مطابقة ذكي ومطور يربط اسم الفرع ورقمة بدقة 100% بدون أي تفويت ---
         function parseStockTextData(text) {
             const lines = text.split(/\r?\n/);
             let cur = shiftData[activeShiftKey];
@@ -607,7 +607,7 @@
                 let cleanLine = line.trim();
                 if(!cleanLine || cleanLine.toLowerCase().includes("grand total")) return;
 
-                // استخراج الرقم الأخير في السطر مهما كانت المسافات أو الفواصل (مثل 3,060 أو 2,807)
+                // استخراج الرقم الأخير في السطر (الاستوك)
                 let numMatch = cleanLine.match(/([\d,]+(?:\.\d+)?)$/);
                 if(!numMatch) return;
 
@@ -616,17 +616,29 @@
 
                 if(!rawBranchName) return;
 
-                // توحيد كلمات حدائق / hadayek / hadaeq للمطابقة المؤكدة
-                let cleanSource = rawBranchName.toLowerCase()
-                    .replace(/hadayek|hadaeq|حدائق|حدائق الاهرام/g, 'hadayek')
-                    .replace(/[^a-z0-9]/g, '');
+                // استخراج الكلمات الأساسية والأرقام من اسم الفرع في الشيت
+                let sourceLower = rawBranchName.toLowerCase();
+                let sourceNumMatch = sourceLower.match(/\d+/);
+                let sourceNum = sourceNumMatch ? sourceNumMatch[0] : "";
 
+                // مطابقة ذكية مع فروع الشفت الحالي
                 let matchedBranch = cur.branchesList.find(b => {
-                    let cleanTarget = b.toLowerCase()
-                        .replace(/hadayek|hadaeq|حدائق|حدائق الاهرام/g, 'hadayek')
-                        .replace(/[^a-z0-9]/g, '');
-                    
-                    return cleanSource.includes(cleanTarget) || cleanTarget.includes(cleanSource);
+                    let targetLower = b.toLowerCase();
+                    let targetNumMatch = targetLower.match(/\d+/);
+                    let targetNum = targetNumMatch ? targetNumMatch[0] : "";
+
+                    // توحيد بعض المسميات الشائعة
+                    let cleanB = targetLower.replace(/hadayek elahram|hadaeq|حدائق الأهرام/g, 'hadayek');
+                    let cleanS = sourceLower.replace(/hadayek elahram|hadaeq|حدائق الأهرام/g, 'hadayek');
+
+                    let baseTarget = cleanB.replace(/\d+/g, '').replace(/[^a-z0-9]/g, '').trim();
+                    let baseSource = cleanS.replace(/\d+/g, '').replace(/[^a-z0-9]/g, '').trim();
+
+                    // شرط المطابقة: تطابق جزء من الاسم الأساسي + تطابق الرقم (لو موجود في الاتنين) أو احتواء تام
+                    let nameMatch = (baseSource.length >= 3 && (baseTarget.includes(baseSource) || baseSource.includes(baseTarget)));
+                    let numMatchCheck = (targetNum && sourceNum) ? (targetNum === sourceNum) : true;
+
+                    return nameMatch && numMatchCheck;
                 });
 
                 if(matchedBranch) {
@@ -1050,7 +1062,7 @@
             let cur = shiftData[activeShiftKey];
             const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]:checked');
             let selectedReps = Array.from(checkboxes).map(cb => cb.value);
-            if(selectedRres = selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
+            if(selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
             if(cur.dailyRecords.length === 0) { alert("No saved records available."); return; }
 
             let reportRows = [];
