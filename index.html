@@ -396,8 +396,7 @@
             "Alex 1", "Alex 2", "Alex 3", "Mansoura 1", "Mansoura 2", "Port said"
         ];
 
-        let teamMembers = [
-            ];
+        let teamMembers = [];
 
         let allocations = {};
         let supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
@@ -414,17 +413,21 @@
             }
         }
 
-        // Initialize Firebase Realtime Listeners
+        // Initialize Firebase Realtime Listeners (Cloud-First with Data Protection Guard)
         function initFirebaseSync() {
             const dbRef = window.fbRef(window.fbDB, 'market_plan_data/');
             window.fbOnValue(dbRef, (snapshot) => {
                 const data = snapshot.val();
                 if(data) {
-                    if(data.branchesList) branchesList = data.branchesList;
-                    if(data.teamMembers) teamMembers = data.teamMembers;
+                    if(data.branchesList && data.branchesList.length > 0) branchesList = data.branchesList;
+                    if(data.teamMembers && data.teamMembers.length > 0) teamMembers = data.teamMembers;
                     if(data.allocations) allocations = data.allocations;
                     if(data.supportsAllocation) supportsAllocation = data.supportsAllocation;
-                    if(data.dailyRecords) dailyRecords = data.dailyRecords;
+                    
+                    // حماية السجلات من المسح التلقائي عند التهيئة
+                    if(data.dailyRecords && data.dailyRecords.length > 0) {
+                        dailyRecords = data.dailyRecords;
+                    }
                 } else {
                     saveToCloud();
                 }
@@ -475,6 +478,10 @@
         function renderDatabase() {
             const tbody = document.getElementById('db-tbody');
             tbody.innerHTML = '';
+            if(teamMembers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No team members added yet.</td></tr>';
+                return;
+            }
             teamMembers.forEach((member, index) => {
                 tbody.innerHTML += `
                     <tr>
@@ -768,7 +775,7 @@
                         <ul>${formatSupports(rec.supports?.chocolate)}</ul>
                     </div>
                     <div class="export-support-card">
-                        <h4> Ambient Support OUT</h4>
+                        <h4>Ambient Support OUT</h4>
                         <ul>${formatSupports(rec.supports?.ambient)}</ul>
                     </div>
                 </div>
