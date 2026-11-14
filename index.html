@@ -329,7 +329,7 @@
                 <!-- STOCK UPLOAD -->
                 <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
                     <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 Import Stock Quantities (Excel Sheet)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .csv). Smart matching supports Alex/اسكندرية and precise numbering (e.g. Zayed 2 vs Zayed 4).</p>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Upload your Excel sheet (.xlsx, .xls, .csv). Smart matching supports Alex/اسكندرية and precise numbering.</p>
                     <input type="file" id="stock-file-input" accept=".xlsx, .xls, .csv" onchange="handleStockFileUpload(event)">
                 </div>
 
@@ -583,7 +583,7 @@
             renderBranches();
         }
 
-        // --- إصلاح زر الريسيت ليصفر المناديب، السبورت، وكميات الاستوك بالكامل ---
+        // --- إصلاح زر الريسيت ليصفر المناديب، السبورت، والاستوك معاً بالكامل ---
         function resetAllocation() {
             if(confirm("Are you sure you want to clear and reset all allocations and stock data?")) {
                 let cur = shiftData[activeShiftKey];
@@ -597,16 +597,18 @@
             }
         }
 
-        // --- إصلاح قراءة شيت الإكسيل وحماية قوية ضد الـ Errors ---
+        // --- إصلاح نهائي لقراءة ملفات الإكسيل بأمان وتجنب أي خطأ Parsing ---
         function handleStockFileUpload(event) {
             const file = event.target.files[0];
             if(!file) return;
 
             const reader = new FileReader();
+            
+            // استخدام قراءة البيانات كـ Binary String لتجنب أخطاء صيغ الملفات (مثل xls أو xlsx)
             reader.onload = function(e) {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, {type: 'binary'});
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
@@ -659,13 +661,15 @@
                     alert(`Successfully imported stock data! Updated ${matchedCount} branches.`);
                 } catch(err) {
                     console.error("Excel parse error:", err);
-                    alert("Error parsing Excel file. Please ensure it is a valid .xlsx or .csv sheet.");
+                    alert("Error parsing Excel file. Please ensure it is a valid .xlsx, .xls or .csv sheet.");
                 }
             };
+            
             reader.onerror = function() {
                 alert("Failed to read the file.");
             };
-            reader.readAsArrayBuffer(file);
+            
+            reader.readAsBinaryString(file);
         }
 
         function renderDatabase() {
