@@ -153,7 +153,7 @@
         select:focus, input:focus { border-color: var(--pink); box-shadow: 0 0 0 2px rgba(236,72,153,0.2); }
 
         select.conflict { 
-            background: rgba(239, 68, 68, 0.25) !important; 
+            background: rgba(239, 68, 68, 0.3) !important; 
             border: 2px solid var(--danger) !important; 
             color: var(--text) !important;
             font-weight: 700;
@@ -329,11 +329,11 @@
 
                 <!-- SUPPORTS -->
                 <div style="margin-bottom: 32px;">
-                    <div class="section-title">Daily Support Allocation</div>
+                    <div class="section-title">🍫 Daily Support Allocation</div>
                     <div class="supports-grid">
                         <div class="support-box">
                             <div class="support-box-header">
-                                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 800;">Snacks Support</h4>
+                                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 800;">🍿 Snacks Support</h4>
                                 <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('snacks')">+ Add Support</button>
                             </div>
                             <div class="support-items-list" id="snacks-list-container"></div>
@@ -341,7 +341,7 @@
 
                         <div class="support-box">
                             <div class="support-box-header">
-                                <h4 style="color: var(--pink); font-size: 15px; font-weight: 800;">Chocolate Support</h4>
+                                <h4 style="color: var(--pink); font-size: 15px; font-weight: 800;">🍫 Chocolate Support</h4>
                                 <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('chocolate')">+ Add Support</button>
                             </div>
                             <div class="support-items-list" id="chocolate-list-container"></div>
@@ -390,8 +390,8 @@
                             <tbody id="export-branches-tbody"></tbody>
                         </table>
                         <div class="export-supports-section">
-                            <div class="export-support-card"><h4>Snacks Support</h4><ul id="export-snacks-ul"></ul></div>
-                            <div class="export-support-card"><h4>Chocolate Support</h4><ul id="export-chocolate-ul"></ul></div>
+                            <div class="export-support-card"><h4>🍿 Snacks Support</h4><ul id="export-snacks-ul"></ul></div>
+                            <div class="export-support-card"><h4>🍫 Chocolate Support</h4><ul id="export-chocolate-ul"></ul></div>
                             <div class="export-support-card"><h4>Ambient Support OUT</h4><ul id="export-ambient-ul"></ul></div>
                         </div>
                     </div>
@@ -473,38 +473,18 @@
         };
 
         let adminPass = "darwin101";
-        let isCloudDataLoaded = false;
-        let liveActiveUsers = {};
+        let isLocalChange = false; // لمنع تداخل التحديث اللحظي مع الكتابة المحلية
 
         function initGlobalMetaSync() {
             const metaRef = window.fbRef(window.fbDB, 'shifts_stable_v1_meta/');
             window.fbOnValue(metaRef, (snapshot) => {
                 const data = snapshot.val();
-                if(data) {
-                    globalShiftsMeta = data;
-                } else {
-                    window.fbSet(metaRef, globalShiftsMeta);
-                }
-                if(document.getElementById('admin-container').style.display === 'flex') {
-                    renderAdminTable();
-                    renderAdminRecords();
-                }
-            });
-        }
-
-        function initActiveUsersTracking() {
-            const activeRef = window.fbRef(window.fbDB, 'shifts_stable_v1_active_users/');
-            window.fbOnValue(activeRef, (snapshot) => {
-                liveActiveUsers = snapshot.val() || {};
-                if(document.getElementById('admin-container').style.display === 'flex') {
-                    renderAdminTable();
-                }
+                if(data) globalShiftsMeta = data;
             });
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             initGlobalMetaSync();
-            initActiveUsersTracking();
         });
 
         function toggleTheme() {
@@ -543,28 +523,18 @@
                 document.getElementById('shift-title-display').innerText = globalShiftsMeta[activeShiftKey].title;
                 document.getElementById('export-title-header').innerText = `${globalShiftsMeta[activeShiftKey].title} - Schedule`;
                 
-                registerUserPresence(activeShiftKey);
-                initFirebaseSyncForShift();
+                initFirebaseRealtimeSyncForShift();
             } else {
                 document.getElementById('login-err').style.display = 'block';
             }
         }
         window.checkLogin = checkLogin;
 
-        function registerUserPresence(shiftKey) {
-            try {
-                const sessionId = 'user_' + Math.random().toString(36).substring(2, 9);
-                const presenceRef = window.fbRef(window.fbDB, `shifts_stable_v1_active_users/${shiftKey}/${sessionId}`);
-                window.fbSet(presenceRef, { onlineAt: new Date().toLocaleTimeString() });
-                window.fbOnDisconnect(presenceRef).remove();
-            } catch(e) {
-                console.error("Presence error:", e);
-            }
-        }
-
-        function initFirebaseSyncForShift() {
+        // ربط لحظي (Realtime onValue) عشان أي تغيير يظهر في نفس اللحظة على الموبايل والكمبيوتر
+        function initFirebaseRealtimeSyncForShift() {
             const dbRef = window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`);
-            window.fbGet(dbRef).then((snapshot) => {
+            window.fbOnValue(dbRef, (snapshot) => {
+                if(isLocalChange) return; // تجاهل التحديث الذاتي أثناء الكتابة
                 const data = snapshot.val();
                 if(data) {
                     if(data.branchesList !== undefined) shiftData[activeShiftKey].branchesList = data.branchesList;
@@ -574,21 +544,16 @@
                     if(data.dailyRecords && Array.isArray(data.dailyRecords)) {
                         shiftData[activeShiftKey].dailyRecords = data.dailyRecords;
                     }
-                } else {
-                    saveShiftToCloud();
                 }
-                isCloudDataLoaded = true;
-                initAppUI();
-            }).catch((error) => {
-                console.error("Firebase read error:", error);
-                isCloudDataLoaded = true;
                 initAppUI();
             });
         }
 
         function saveShiftToCloud() {
-            if(!isCloudDataLoaded) return;
-            window.fbSet(window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
+            isLocalChange = true;
+            window.fbSet(window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`), shiftData[activeShiftKey]).then(() => {
+                setTimeout(() => { isLocalChange = false; }, 400);
+            });
         }
 
         function switchTab(tabId, btn) {
@@ -611,7 +576,7 @@
         }
 
         function startNewPlan() {
-            if(confirm("هل أنت متأكد من بدء بلان جديدة؟ سيتم تفريغ الفروع الحالية.")) {
+            if(confirm("هل أنت متأكد من بدء بلان جديدة؟ سيتم تفريغ الفروع الحالية دون مسح السجلات القديمة.")) {
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
@@ -820,7 +785,9 @@
             let repCounts = {};
             cur.branchesList.forEach(branch => {
                 const rep = cur.allocations[branch] || '';
-                if(rep && rep !== "Without Dispatcher") repCounts[rep] = (repCounts[rep] || 0) + 1;
+                if(rep && rep !== "" && rep !== "Without Dispatcher") {
+                    repCounts[rep] = (repCounts[rep] || 0) + 1;
+                }
             });
 
             let coveredCount = 0;
@@ -828,9 +795,9 @@
 
             cur.branchesList.forEach((branch, idx) => {
                 const rep = cur.allocations[branch] || '';
-                if(rep) coveredCount++;
+                if(rep && rep !== "") coveredCount++;
 
-                const isConflict = rep && rep !== "Without Dispatcher" && repCounts[rep] > 1;
+                const isConflict = rep && rep !== "" && rep !== "Without Dispatcher" && repCounts[rep] > 1;
                 if(isConflict) conflictCount++;
 
                 let optionsHTML = '<option value="">-- Select Dispatcher --</option>';
@@ -908,7 +875,7 @@
             }
 
             saveShiftToCloud();
-            alert("تم حفظ بلان اليوم بنجاح!");
+            alert("تم حفظ بلان اليوم بنجاح ولن تضيع أبدًا وستبقى في السجلات!");
             renderRecords();
         }
         window.saveDailyRecord = saveDailyRecord;
@@ -1007,19 +974,12 @@
             tbody.innerHTML = '';
             ['morning', 'between', 'night'].forEach(key => {
                 let sh = globalShiftsMeta[key];
-                
-                let activeUsersObj = liveActiveUsers?.[key] || {};
-                let activeCount = Object.keys(activeUsersObj).length;
-                let activeBadge = activeCount > 0 
-                    ? `<span style="background: rgba(16,185,129,0.15); color: var(--accent); border: 1px solid rgba(16,185,129,0.3); padding: 4px 12px; border-radius: 8px; font-weight: 800;">🟢 ${activeCount} Online</span>`
-                    : `<span style="color: var(--text-muted);">🔴 0 Offline</span>`;
-
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${sh.title}</strong> (${key})</td>
                         <td><input type="text" id="admin-pass-${key}" value="${sh.pass}" style="width: 150px;"></td>
                         <td><input type="checkbox" id="admin-en-${key}" ${sh.enabled ? 'checked' : ''} style="width: 20px; height: 20px;"> Enabled</td>
-                        <td>${activeBadge}</td>
+                        <td><span style="color: var(--accent);">🟢 Active Cloud</span></td>
                         <td><button class="btn btn-success" style="padding: 6px 14px; font-size: 12px; width: auto;" onclick="updateShiftConfig('${key}')">Save Changes</button></td>
                     </tr>
                 `;
