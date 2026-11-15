@@ -482,6 +482,7 @@
         };
 
         let adminPass = "darwin101";
+        let isCloudDataLoaded = false; // لمنع مسح أو الكتابة فوق السجلات عند بداية التحميل
 
         function initGlobalMetaSync() {
             const metaRef = window.fbRef(window.fbDB, 'shifts_stable_v1_meta/');
@@ -558,14 +559,17 @@
                 } else {
                     saveShiftToCloud();
                 }
+                isCloudDataLoaded = true; // تم جلب البيانات السحابية بنجاح وأمان
                 initAppUI();
             }, (error) => {
                 console.error("Firebase sync error:", error);
+                isCloudDataLoaded = true;
                 initAppUI();
             });
         }
 
         function saveShiftToCloud() {
+            if(!isCloudDataLoaded) return; // حماية مطلقة لعدم رفع بيانات فارغة عند الفتح
             window.fbSet(window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
         }
 
@@ -588,7 +592,6 @@
             renderBranches();
         }
 
-        // --- زرار الريسيت بيصفر التوزيع والسبورات بس من غير ما يلمس السجلات التاريخية ---
         function resetAllocation() {
             if(confirm("Are you sure you want to clear current shift allocations and start a fresh plan? (Historical records will NOT be deleted)")) {
                 let cur = shiftData[activeShiftKey];
@@ -1131,4 +1134,4 @@
         window.exportImage = exportImage;
     </script>
 </body>
-</html>
+</html>VVV
