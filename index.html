@@ -18,7 +18,7 @@
           authDomain: "marketplan-91d4e.firebaseapp.com",
           databaseURL: "https://marketplan-91d4e-default-rtdb.europe-west1.firebasedatabase.app",
           projectId: "marketplan-91d4e",
-          storageBucket: "marketplan-91d4e.firebasestorage.app",
+          storageBucket: "marketplan-91d4e.appspot.com",
           messagingSenderId: "19353933641",
           appId: "1:19353933641:web:78dd1effc9e89568d6ec98",
           measurementId: "G-XMTC1KWW7Z"
@@ -571,7 +571,11 @@
                     if(data.teamMembers) shiftData[activeShiftKey].teamMembers = data.teamMembers;
                     if(data.allocations) shiftData[activeShiftKey].allocations = data.allocations;
                     if(data.supportsAllocation) shiftData[activeShiftKey].supportsAllocation = data.supportsAllocation;
-                    if(data.dailyRecords) shiftData[activeShiftKey].dailyRecords = data.dailyRecords;
+                    
+                    // حماية قوية جداً للسجلات: لا يتم تحديث السجلات بداتا فارغة أبداً للحفاظ على البيانات القديمة
+                    if(data.dailyRecords && Array.isArray(data.dailyRecords) && data.dailyRecords.length > 0) {
+                        shiftData[activeShiftKey].dailyRecords = data.dailyRecords;
+                    }
                 } else {
                     saveShiftToCloud();
                 }
@@ -608,7 +612,6 @@
             renderBranches();
         }
 
-        // Reset Allocation يصفر التوزيعات الحالية والسابورت فقط ولا يقترب نهائياً من السجلات (Records)
         function resetAllocation() {
             if(confirm("Are you sure you want to clear current shift allocations and start a fresh plan? (Historical records will NOT be deleted)")) {
                 let cur = shiftData[activeShiftKey];
@@ -906,7 +909,7 @@
             }
 
             saveShiftToCloud();
-            alert("Today's plan successfully saved to Records!");
+            alert("Today's plan successfully saved to Records and protected!");
         }
         window.saveDailyRecord = saveDailyRecord;
 
