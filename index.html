@@ -588,15 +588,16 @@
             renderBranches();
         }
 
+        // --- زرار الريسيت بيصفر التوزيع والسبورات بس من غير ما يلمس السجلات التاريخية ---
         function resetAllocation() {
-            if(confirm("Are you sure you want to clear and reset all allocations?")) {
+            if(confirm("Are you sure you want to clear current shift allocations and start a fresh plan? (Historical records will NOT be deleted)")) {
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
                 saveShiftToCloud();
                 renderSupportsUI();
                 renderBranches();
-                alert("Reset successfully!");
+                alert("Current plan reset successfully!");
             }
         }
         window.resetAllocation = resetAllocation;
