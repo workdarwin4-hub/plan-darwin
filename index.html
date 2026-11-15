@@ -236,7 +236,7 @@
             </div>
             <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <label style="margin: 0;">Select Representative(s):</label>
+                    <label style="margin: 0;">Select Dispatcher(s):</label>
                     <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; width: auto;" onclick="toggleSelectAllReps(this)">Select All / None</button>
                 </div>
                 <div id="report-checkboxes-container" class="checkbox-container"></div>
@@ -315,7 +315,7 @@
                 <div class="toolbar">
                     <div class="search-box">
                         <span>🔍</span>
-                        <input type="text" id="search-input" placeholder="Search by branch or rep name..." oninput="filterBranches()">
+                        <input type="text" id="search-input" placeholder="Search by branch or dispatcher..." oninput="filterBranches()">
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <button class="btn btn-warning" onclick="resetAllocation()">🗑️ Reset Allocation</button>
@@ -355,14 +355,14 @@
                 </div>
 
                 <!-- BRANCHES -->
-                <div class="section-title">📍 Branch Representatives Allocation</div>
+                <div class="section-title">📍 Branch Dispatcher Allocation</div>
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#</th>
                                 <th>Branch Name</th>
-                                <th>Assigned Representative</th>
+                                <th>Assigned Dispatcher</th>
                             </tr>
                         </thead>
                         <tbody id="branches-tbody"></tbody>
@@ -381,7 +381,7 @@
                                 <tr>
                                     <th style="width: 40px;">#</th>
                                     <th>Branch Name</th>
-                                    <th>Representative</th>
+                                    <th>Dispatcher</th>
                                 </tr>
                             </thead>
                             <tbody id="export-branches-tbody"></tbody>
@@ -413,7 +413,7 @@
                 </div>
             </div>
 
-            <!-- TAB 3: BRANCHES (ترتيب الفروع فوق وتحت) -->
+            <!-- TAB 3: BRANCHES -->
             <div id="tab-branches" class="tab-content">
                 <div class="db-grid">
                     <div class="form-card">
@@ -446,11 +446,14 @@
 
     <script>
         let activeShiftKey = "";
+        let globalShiftsMeta = {
+            morning: { pass: "ziad101", enabled: true, title: "Morning Shift" },
+            between: { pass: "94531", enabled: true, title: "Between Shift" },
+            night: { pass: "ziad102", enabled: true, title: "Night Shift" }
+        };
+
         let shiftData = {
             morning: {
-                pass: "ziad101",
-                enabled: true,
-                title: "Morning Shift",
                 branchesList: [],
                 teamMembers: [],
                 allocations: {},
@@ -458,9 +461,6 @@
                 dailyRecords: []
             },
             between: {
-                pass: "94531",
-                enabled: true,
-                title: "Between Shift",
                 branchesList: [
                     "October 2", "Zayed #2", "Garden #1", "Zayed #4", "Obour #2", 
                     "October #3", "Shorouk #3", "Shobra #1", "El zaher #1", "Hadayek Elahram", 
@@ -473,9 +473,6 @@
                 dailyRecords: []
             },
             night: {
-                pass: "ziad102",
-                enabled: true,
-                title: "Night Shift",
                 branchesList: [],
                 teamMembers: [],
                 allocations: {},
@@ -485,6 +482,26 @@
         };
 
         let adminPass = "darwin101";
+
+        function initGlobalMetaSync() {
+            const metaRef = window.fbRef(window.fbDB, 'shifts_stable_v1_meta/');
+            window.fbOnValue(metaRef, (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    globalShiftsMeta = data;
+                } else {
+                    window.fbSet(metaRef, globalShiftsMeta);
+                }
+                if(document.getElementById('admin-container').style.display === 'flex') {
+                    renderAdminTable();
+                    renderAdminRecords();
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initGlobalMetaSync();
+        });
 
         function toggleTheme() {
             const body = document.body;
@@ -504,23 +521,23 @@
             }
 
             let foundShift = null;
-            for(let key in shiftData) {
-                if(shiftData[key].pass === val) {
+            for(let key in globalShiftsMeta) {
+                if(globalShiftsMeta[key].pass === val) {
                     foundShift = key;
                     break;
                 }
             }
 
             if(foundShift) {
-                if(!shiftData[foundShift].enabled) {
+                if(!globalShiftsMeta[foundShift].enabled) {
                     alert("This shift is currently disabled by Admin.");
                     return;
                 }
                 activeShiftKey = foundShift;
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-container').style.display = 'flex';
-                document.getElementById('shift-title-display').innerText = shiftData[activeShiftKey].title;
-                document.getElementById('export-title-header').innerText = `${shiftData[activeShiftKey].title} - Schedule`;
+                document.getElementById('shift-title-display').innerText = globalShiftsMeta[activeShiftKey].title;
+                document.getElementById('export-title-header').innerText = `${globalShiftsMeta[activeShiftKey].title} - Schedule`;
                 initFirebaseSyncForShift();
             } else {
                 document.getElementById('login-err').style.display = 'block';
@@ -529,7 +546,7 @@
         window.checkLogin = checkLogin;
 
         function initFirebaseSyncForShift() {
-            const dbRef = window.fbRef(window.fbDB, `shifts_clean_data/${activeShiftKey}/`);
+            const dbRef = window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`);
             window.fbOnValue(dbRef, (snapshot) => {
                 const data = snapshot.val();
                 if(data) {
@@ -549,7 +566,7 @@
         }
 
         function saveShiftToCloud() {
-            window.fbSet(window.fbRef(window.fbDB, `shifts_clean_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
+            window.fbSet(window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
         }
 
         function switchTab(tabId, btn) {
@@ -584,7 +601,6 @@
         }
         window.resetAllocation = resetAllocation;
 
-        // --- تحريك الفروع أعلى وأسفل مع الحفظ الفوري ---
         function moveBranchUp(index) {
             let cur = shiftData[activeShiftKey];
             if(index > 0) {
@@ -782,7 +798,7 @@
             let repCounts = {};
             cur.branchesList.forEach(branch => {
                 const rep = cur.allocations[branch] || '';
-                if(rep && rep !== "Without Rep") repCounts[rep] = (repCounts[rep] || 0) + 1;
+                if(rep && rep !== "Without Dispatcher") repCounts[rep] = (repCounts[rep] || 0) + 1;
             });
 
             let coveredCount = 0;
@@ -790,13 +806,13 @@
 
             cur.branchesList.forEach((branch, idx) => {
                 const rep = cur.allocations[branch] || '';
-                if(rep && rep !== "Without Rep") coveredCount++;
+                if(rep) coveredCount++;
 
-                const isConflict = rep && rep !== "Without Rep" && repCounts[rep] > 1;
+                const isConflict = rep && rep !== "Without Dispatcher" && repCounts[rep] > 1;
                 if(isConflict) conflictCount++;
 
-                let optionsHTML = '<option value="">-- Select Representative --</option>';
-                optionsHTML += '<option value="Without Rep" ' + (rep === "Without Rep" ? 'selected' : '') + '>Without Rep</option>';
+                let optionsHTML = '<option value="">-- Select Dispatcher --</option>';
+                optionsHTML += '<option value="Without Dispatcher" ' + (rep === "Without Dispatcher" ? 'selected' : '') + '>Without Dispatcher</option>';
                 
                 cur.teamMembers.forEach(m => {
                     const sel = (m.name === rep) ? 'selected' : '';
@@ -823,7 +839,11 @@
         window.renderBranches = renderBranches;
 
         function updateAllocation(branch, value) {
-            shiftData[activeShiftKey].allocations[branch] = value;
+            if(!value) {
+                delete shiftData[activeShiftKey].allocations[branch];
+            } else {
+                shiftData[activeShiftKey].allocations[branch] = value;
+            }
             saveShiftToCloud();
             renderBranches();
         }
@@ -913,15 +933,22 @@
             
             let branchesHtml = '';
             let bList = rec.branchesList || Object.keys(rec.allocations);
-            bList.forEach((branch, i) => {
-                const rep = rec.allocations[branch] || 'Without Rep';
-                branchesHtml += `<tr><td>${i + 1}</td><td>${branch}</td><td>${rep}</td></tr>`;
+            let validIdx = 1;
+            bList.forEach((branch) => {
+                const rep = rec.allocations[branch];
+                if(rep) {
+                    branchesHtml += `<tr><td>${validIdx++}</td><td>${branch}</td><td>${rep}</td></tr>`;
+                }
             });
+
+            if(!branchesHtml) {
+                branchesHtml = '<tr><td colspan="3" style="text-align:center;">No branches assigned in this record.</td></tr>';
+            }
 
             const contentHtml = `
                 <h4 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations</h4>
                 <table class="export-table">
-                    <thead><tr><th>#</th><th>Branch Name</th><th>Representative</th></tr></thead>
+                    <thead><tr><th>#</th><th>Branch Name</th><th>Dispatcher</th></tr></thead>
                     <tbody>${branchesHtml}</tbody>
                 </table>
             `;
@@ -943,17 +970,8 @@
         window.deleteRecord = deleteRecord;
 
         function initAdminPanel() {
-            const adminRef = window.fbRef(window.fbDB, 'shifts_clean_data/');
-            window.fbOnValue(adminRef, (snapshot) => {
-                const data = snapshot.val();
-                if(data) {
-                    if(data.morning) shiftData.morning = data.morning;
-                    if(data.between) shiftData.between = data.between;
-                    if(data.night) shiftData.night = data.night;
-                }
-                renderAdminTable();
-                renderAdminRecords();
-            });
+            renderAdminTable();
+            renderAdminRecords();
         }
 
         function renderAdminTable() {
@@ -961,7 +979,7 @@
             if(!tbody) return;
             tbody.innerHTML = '';
             ['morning', 'between', 'night'].forEach(key => {
-                let sh = shiftData[key];
+                let sh = globalShiftsMeta[key];
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${sh.title}</strong> (${key})</td>
@@ -976,10 +994,12 @@
         function updateShiftConfig(key) {
             const newPass = document.getElementById(`admin-pass-${key}`).value.trim();
             const newEn = document.getElementById(`admin-en-${key}`).checked;
-            shiftData[key].pass = newPass;
-            shiftData[key].enabled = newEn;
-            window.fbSet(window.fbRef(window.fbDB, `shifts_clean_data/${key}/`), shiftData[key]);
-            alert(`Shift ${key} updated successfully!`);
+            globalShiftsMeta[key].pass = newPass;
+            globalShiftsMeta[key].enabled = newEn;
+            
+            window.fbSet(window.fbRef(window.fbDB, 'shifts_stable_v1_meta/'), globalShiftsMeta).then(() => {
+                alert(`Shift ${key} updated successfully!`);
+            });
         }
         window.updateShiftConfig = updateShiftConfig;
 
@@ -989,13 +1009,12 @@
             container.innerHTML = '';
             
             ['morning', 'between', 'night'].forEach(key => {
-                let sh = shiftData[key];
-                let recordsCount = (sh.dailyRecords || []).length;
+                let sh = globalShiftsMeta[key];
                 container.innerHTML += `
                     <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <h4 style="color: var(--secondary); font-size: 16px; margin-bottom: 4px;">${sh.title} (${key})</h4>
-                            <p style="color: var(--text-muted); font-size: 13px;">Status: ${sh.enabled ? 'Active' : 'Disabled'} | Saved Records: ${recordsCount}</p>
+                            <p style="color: var(--text-muted); font-size: 13px;">Status: ${sh.enabled ? 'Active' : 'Disabled'}</p>
                         </div>
                         <span class="stock-badge">Password: ${sh.pass}</span>
                     </div>
@@ -1048,7 +1067,7 @@
                 let repAssignments = {};
                 for(let branch in rec.allocations) {
                     let rep = rec.allocations[branch];
-                    if(rep && rep !== "Without Rep") {
+                    if(rep) {
                         if(!repAssignments[rep]) repAssignments[rep] = [];
                         repAssignments[rep].push(`Branch: ${branch}`);
                     }
@@ -1058,7 +1077,7 @@
                     if(repAssignments[repName] && repAssignments[repName].length > 0) {
                         status = repAssignments[repName].join(" + ");
                     }
-                    reportRows.push({ "Date": rec.dateStr, "Representative Name": repName, "Daily Status / Location": status });
+                    reportRows.push({ "Date": rec.dateStr, "Dispatcher Name": repName, "Daily Status / Location": status });
                 });
             });
 
@@ -1077,13 +1096,19 @@
             if(!expBranchesTbody) return;
             expBranchesTbody.innerHTML = '';
             let idx = 1;
-            let bList = cur.branchesList || Object.keys(cur.allocations);
+            let bList = cur.branchesList || [];
+            let hasExportable = false;
             bList.forEach(branch => {
                 const rep = cur.allocations[branch];
                 if(rep) {
+                    hasExportable = true;
                     expBranchesTbody.innerHTML += `<tr><td>${idx++}</td><td>${branch}</td><td>${rep}</td></tr>`;
                 }
             });
+
+            if(!hasExportable) {
+                expBranchesTbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No assigned branches to export.</td></tr>';
+            }
 
             ['snacks', 'chocolate', 'ambient'].forEach(cat => {
                 const ul = document.getElementById(`export-${cat}-ul`);
