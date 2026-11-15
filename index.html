@@ -11,7 +11,7 @@
     <!-- Firebase SDKs (Modular CDN) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, get, child, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, get, child, onValue, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyAgDJ5J51PF9J05Pi-u9PlYytQFc8T_Bl8",
@@ -34,6 +34,7 @@
         window.fbChild = child;
         window.fbOnValue = onValue;
         window.fbRemove = remove;
+        window.fbOnDisconnect = onDisconnect;
     </script>
 
     <style>
@@ -139,8 +140,9 @@
             margin-bottom: 24px; 
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
         }
-        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; }
-        th, td { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text); white-space: nowrap; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; table-layout: auto; min-width: 100%; }
+        th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text); }
         th { background: var(--select-bg); color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
         tr:hover { background: rgba(100,100,100,0.03); }
         
@@ -257,7 +259,7 @@
             </div>
         </header>
         <main>
-            <div class="section-title">⚙️ Shift Passwords & Security Control</div>
+            <div class="section-title">⚙️ Shift Passwords & Security Control (Live Active Users)</div>
             <div class="table-responsive" style="margin-bottom: 32px;">
                 <table>
                     <thead>
@@ -265,6 +267,7 @@
                             <th>Shift Name</th>
                             <th>Current Password</th>
                             <th>Shift Status</th>
+                            <th>Currently Active Users Online</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -360,9 +363,9 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 50px;">#</th>
-                                <th>Branch Name</th>
-                                <th>Assigned Dispatcher</th>
+                                <th style="width: 40px;">#</th>
+                                <th style="width: 35%;">Branch Name</th>
+                                <th style="width: 65%;">Assigned Dispatcher</th>
                             </tr>
                         </thead>
                         <tbody id="branches-tbody"></tbody>
@@ -453,36 +456,25 @@
         };
 
         let shiftData = {
-            morning: {
-                branchesList: [],
-                teamMembers: [],
-                allocations: {},
-                supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
-                dailyRecords: []
-            },
-            between: {
+            morning: { branchesList: [], teamMembers: [], allocations: {}, supportsAllocation: { snacks: [], chocolate: [], ambient: [] }, dailyRecords: [] },
+            between: { 
                 branchesList: [
                     "October 2", "Zayed #2", "Garden #1", "Zayed #4", "Obour #2", 
                     "October #3", "Shorouk #3", "Shobra #1", "El zaher #1", "Hadayek Elahram", 
                     "October #4", "New Cairo #1", "New Cairo #5", "Agouza #1", "Obour #1", 
                     "Alex 1", "Alex 2", "Alex 3", "Mansoura 1", "Mansoura 2", "Port said"
-                ],
-                teamMembers: [],
-                allocations: {},
-                supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
-                dailyRecords: []
+                ], 
+                teamMembers: [], 
+                allocations: {}, 
+                supportsAllocation: { snacks: [], chocolate: [], ambient: [] }, 
+                dailyRecords: [] 
             },
-            night: {
-                branchesList: [],
-                teamMembers: [],
-                allocations: {},
-                supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
-                dailyRecords: []
-            }
+            night: { branchesList: [], teamMembers: [], allocations: {}, supportsAllocation: { snacks: [], chocolate: [], ambient: [] }, dailyRecords: [] }
         };
 
         let adminPass = "darwin101";
-        let isCloudDataLoaded = false; // لمنع مسح أو الكتابة فوق السجلات عند بداية التحميل
+        let isCloudDataLoaded = false;
+        let activePresenceRef = null;
 
         function initGlobalMetaSync() {
             const metaRef = window.fbRef(window.fbDB, 'shifts_stable_v1_meta/');
@@ -500,8 +492,20 @@
             });
         }
 
+        // تتبع المتواجدين (Active Users Live Tracking)
+        function initActiveUsersTracking() {
+            const activeRef = window.fbRef(window.fbDB, 'shifts_stable_v1_active_users/');
+            window.fbOnValue(activeRef, (snapshot) => {
+                window.liveActiveUsers = snapshot.val() || {};
+                if(document.getElementById('admin-container').style.display === 'flex') {
+                    renderAdminTable();
+                }
+            });
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             initGlobalMetaSync();
+            initActiveUsersTracking();
         });
 
         function toggleTheme() {
@@ -539,12 +543,23 @@
                 document.getElementById('app-container').style.display = 'flex';
                 document.getElementById('shift-title-display').innerText = globalShiftsMeta[activeShiftKey].title;
                 document.getElementById('export-title-header').innerText = `${globalShiftsMeta[activeShiftKey].title} - Schedule`;
+                
+                // تسجيل الوجود الحالي في هذا الشفت سحابياً
+                registerUserPresence(activeShiftKey);
+
                 initFirebaseSyncForShift();
             } else {
                 document.getElementById('login-err').style.display = 'block';
             }
         }
         window.checkLogin = checkLogin;
+
+        function registerUserPresence(shiftKey) {
+            const sessionId = 'user_' + Math.random().toString(36.substring(2, 9));
+            activePresenceRef = window.fbRef(window.fbDB, `shifts_stable_v1_active_users/${shiftKey}/${sessionId}`);
+            window.fbSet(activePresenceRef, { loggedInAt: new Date().toLocaleTimeString() });
+            window.fbOnDisconnect(activePresenceRef).remove();
+        }
 
         function initFirebaseSyncForShift() {
             const dbRef = window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`);
@@ -559,7 +574,7 @@
                 } else {
                     saveShiftToCloud();
                 }
-                isCloudDataLoaded = true; // تم جلب البيانات السحابية بنجاح وأمان
+                isCloudDataLoaded = true;
                 initAppUI();
             }, (error) => {
                 console.error("Firebase sync error:", error);
@@ -569,7 +584,7 @@
         }
 
         function saveShiftToCloud() {
-            if(!isCloudDataLoaded) return; // حماية مطلقة لعدم رفع بيانات فارغة عند الفتح
+            if(!isCloudDataLoaded) return;
             window.fbSet(window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
         }
 
@@ -984,11 +999,20 @@
             tbody.innerHTML = '';
             ['morning', 'between', 'night'].forEach(key => {
                 let sh = globalShiftsMeta[key];
+                
+                // حساب عدد المتواجدين حالياً في هذا الشفت
+                let activeUsersObj = window.liveActiveUsers?.[key] || {};
+                let activeCount = Object.keys(activeUsersObj).length;
+                let activeBadge = activeCount > 0 
+                    ? `<span style="background: rgba(16,185,129,0.15); color: var(--accent); border: 1px solid rgba(16,185,129,0.3); padding: 4px 12px; border-radius: 8px; font-weight: 800;">🟢 ${activeCount} Online</span>`
+                    : `<span style="color: var(--text-muted);">🔴 0 Offline</span>`;
+
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${sh.title}</strong> (${key})</td>
                         <td><input type="text" id="admin-pass-${key}" value="${sh.pass}" style="width: 150px;"></td>
                         <td><input type="checkbox" id="admin-en-${key}" ${sh.enabled ? 'checked' : ''} style="width: 20px; height: 20px;"> Enabled</td>
+                        <td>${activeBadge}</td>
                         <td><button class="btn btn-success" style="padding: 6px 14px; font-size: 12px; width: auto;" onclick="updateShiftConfig('${key}')">Save Changes</button></td>
                     </tr>
                 `;
@@ -1134,4 +1158,4 @@
         window.exportImage = exportImage;
     </script>
 </body>
-</html>VVV
+</html>
