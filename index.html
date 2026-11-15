@@ -473,7 +473,6 @@
         };
 
         let adminPass = "darwin101";
-        let isCloudDataLoaded = false;
         let liveActiveUsers = {};
 
         function initGlobalMetaSync() {
@@ -564,7 +563,6 @@
 
         function initFirebaseSyncForShift() {
             const dbRef = window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`);
-            // استخدام once بدلاً من onValue المستمر عند التحميل لمنع أي تداخل أو إعادة كتابة عشوائية للبيانات المحفوظة
             window.fbGet(dbRef).then((snapshot) => {
                 const data = snapshot.val();
                 if(data) {
@@ -575,20 +573,15 @@
                     if(data.dailyRecords && Array.isArray(data.dailyRecords)) {
                         shiftData[activeShiftKey].dailyRecords = data.dailyRecords;
                     }
-                } else {
-                    saveShiftToCloud();
                 }
-                isCloudDataLoaded = true;
                 initAppUI();
             }).catch((error) => {
                 console.error("Firebase read error:", error);
-                isCloudDataLoaded = true;
                 initAppUI();
             });
         }
 
         function saveShiftToCloud() {
-            if(!isCloudDataLoaded) return;
             window.fbSet(window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
         }
 
@@ -612,14 +605,14 @@
         }
 
         function startNewPlan() {
-            if(confirm("هل أنت متأكد من بدء بلان جديدة؟ سيتم تفريغ جميع المناديب من الفروع الحالية لتوزيع مناديب جديدة، ولن يتم مسح السجلات القديمة.")) {
+            if(confirm("هل أنت متأكد من بدء بلان جديدة؟ سيتم تفريغ الفروع الحالية دون مسح السجلات القديمة.")) {
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
                 saveShiftToCloud();
                 renderSupportsUI();
                 renderBranches();
-                alert("تم تفريغ البلان الحالية بنجاح، يمكنك البدء بتوزيع المناديب من جديد!");
+                alert("تم تفريغ البلان بنجاح!");
             }
         }
         window.startNewPlan = startNewPlan;
@@ -909,7 +902,7 @@
             }
 
             saveShiftToCloud();
-            alert("تم حفظ بلان اليوم في السجلات بنجاح ولن تضيع أبدًا!");
+            alert("تم حفظ بلان اليوم بنجاح في السجلات ولن تضيع أبدًا!");
         }
         window.saveDailyRecord = saveDailyRecord;
 
