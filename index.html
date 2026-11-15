@@ -157,8 +157,6 @@
             font-weight: 700;
         }
 
-        .stock-badge { font-size: 12px; background: rgba(59, 130, 246, 0.15); color: var(--secondary); border: 1px solid rgba(59, 130, 246, 0.3); padding: 4px 10px; border-radius: 6px; font-weight: 700; display: inline-block; }
-
         .db-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
         .form-card { background: var(--card-bg); border: 1px solid var(--border); padding: 24px; border-radius: 14px; height: fit-content; }
         .form-group { margin-bottom: 16px; }
@@ -287,7 +285,7 @@
                 <span id="shift-badge" style="font-size: 12px; background: rgba(236,72,153,0.15); color: var(--pink); border: 1px solid rgba(236,72,153,0.3); padding: 2px 10px; border-radius: 6px; font-weight: 700;">Cloud Shift</span>
             </div>
             <div class="nav-tabs">
-                <button class="tab-btn active" onclick="switchTab('allocation', this)">Branch & Stock</button>
+                <button class="tab-btn active" onclick="switchTab('allocation', this)">Branch Allocation</button>
                 <button class="tab-btn" onclick="switchTab('database', this)">Team</button>
                 <button class="tab-btn" onclick="switchTab('branches', this)">Branches</button>
                 <button class="tab-btn" onclick="switchTab('records', this)">Records</button>
@@ -297,7 +295,7 @@
         </header>
 
         <main>
-            <!-- TAB 1: ALLOCATION, SUPPORTS & STOCK -->
+            <!-- TAB 1: ALLOCATION & SUPPORTS -->
             <div id="tab-allocation" class="tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -317,21 +315,13 @@
                 <div class="toolbar">
                     <div class="search-box">
                         <span>🔍</span>
-                        <input type="text" id="search-input" placeholder="Search by rep name, HR ID..." oninput="filterBranches()">
+                        <input type="text" id="search-input" placeholder="Search by branch or rep name..." oninput="filterBranches()">
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                         <button class="btn btn-warning" onclick="resetAllocation()">🗑️ Reset Allocation</button>
                         <button class="btn btn-success" onclick="saveDailyRecord()">💾 Save Today's Plan</button>
                         <button class="btn btn-pink" onclick="exportImage()">📸 Export as Image</button>
                     </div>
-                </div>
-
-                <!-- FAST STOCK PASTE IMPORTER (بدون تهنيج وبأداء سريع جداً) -->
-                <div class="form-card" style="margin-bottom: 32px; background: rgba(59,130,246,0.05); border: 1px dashed var(--secondary);">
-                    <h3 style="font-size: 16px; color: var(--secondary); margin-bottom: 8px; font-weight: 800;">📦 استيراد الاستوك دفعة واحدة (آمن وسريع)</h3>
-                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">ألصق البيانات هنا (لو ظهر تهنيج استخدم Ctrl+Shift+V للصق الخام)، ثم اضغط زر الاستيراد:</p>
-                    <textarea id="paste-csv-area" placeholder="KAT/OUT Alexandria FP #1    17109&#10;KAT/OUT Alexandria FP #2    11549" style="width: 100%; height: 90px; background: var(--select-bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 8px; outline: none;"></textarea>
-                    <button class="btn btn-success" style="padding: 10px 16px; font-size: 14px; width: auto;" onclick="importPastedStockData()">🚀 استيراد وتوزيع الأرقام فوراً</button>
                 </div>
 
                 <!-- SUPPORTS -->
@@ -365,14 +355,13 @@
                 </div>
 
                 <!-- BRANCHES -->
-                <div class="section-title">📍 Branch Representatives & Stock Quantities</div>
+                <div class="section-title">📍 Branch Representatives Allocation</div>
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#</th>
                                 <th>Branch Name</th>
-                                <th>Stock Qty</th>
                                 <th>Assigned Representative</th>
                             </tr>
                         </thead>
@@ -386,13 +375,12 @@
                             <h2 id="export-title-header">Market Plan - Schedule</h2>
                             <p id="export-date-str">Date: ---</p>
                         </div>
-                        <h3 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations & Stock</h3>
+                        <h3 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations</h3>
                         <table class="export-table">
                             <thead>
                                 <tr>
                                     <th style="width: 40px;">#</th>
                                     <th>Branch Name</th>
-                                    <th>Stock</th>
                                     <th>Representative</th>
                                 </tr>
                             </thead>
@@ -467,7 +455,6 @@
                 teamMembers: [],
                 allocations: {},
                 supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
-                branchStock: {},
                 dailyRecords: []
             },
             between: {
@@ -483,7 +470,6 @@
                 teamMembers: [],
                 allocations: {},
                 supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
-                branchStock: {},
                 dailyRecords: []
             },
             night: {
@@ -494,7 +480,6 @@
                 teamMembers: [],
                 allocations: {},
                 supportsAllocation: { snacks: [], chocolate: [], ambient: [] },
-                branchStock: {},
                 dailyRecords: []
             }
         };
@@ -544,7 +529,7 @@
         window.checkLogin = checkLogin;
 
         function initFirebaseSyncForShift() {
-            const dbRef = window.fbRef(window.fbDB, `shifts_data/${activeShiftKey}/`);
+            const dbRef = window.fbRef(window.fbDB, `shifts_clean_data/${activeShiftKey}/`);
             window.fbOnValue(dbRef, (snapshot) => {
                 const data = snapshot.val();
                 if(data) {
@@ -552,7 +537,6 @@
                     if(data.teamMembers) shiftData[activeShiftKey].teamMembers = data.teamMembers;
                     if(data.allocations) shiftData[activeShiftKey].allocations = data.allocations;
                     if(data.supportsAllocation) shiftData[activeShiftKey].supportsAllocation = data.supportsAllocation;
-                    if(data.branchStock) shiftData[activeShiftKey].branchStock = data.branchStock;
                     if(data.dailyRecords) shiftData[activeShiftKey].dailyRecords = data.dailyRecords;
                 } else {
                     saveShiftToCloud();
@@ -565,7 +549,7 @@
         }
 
         function saveShiftToCloud() {
-            window.fbSet(window.fbRef(window.fbDB, `shifts_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
+            window.fbSet(window.fbRef(window.fbDB, `shifts_clean_data/${activeShiftKey}/`), shiftData[activeShiftKey]);
         }
 
         function switchTab(tabId, btn) {
@@ -588,11 +572,10 @@
         }
 
         function resetAllocation() {
-            if(confirm("Are you sure you want to clear and reset all allocations and stock data?")) {
+            if(confirm("Are you sure you want to clear and reset all allocations?")) {
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
-                cur.branchStock = {};
                 saveShiftToCloud();
                 renderSupportsUI();
                 renderBranches();
@@ -601,54 +584,7 @@
         }
         window.resetAllocation = resetAllocation;
 
-        // --- معالجة الاستيراد بشكل آمن وسريع بدون تهنيج ---
-        function importPastedStockData() {
-            const pastedText = document.getElementById('paste-csv-area').value.trim();
-            if(!pastedText) {
-                alert("برجاء لصق بيانات الاستوك أولاً!");
-                return;
-            }
-
-            let cur = shiftData[activeShiftKey];
-            const lines = pastedText.split(/\r?\n/);
-            let matchedCount = 0;
-
-            lines.forEach(line => {
-                let cleanLine = line.trim();
-                if(!cleanLine || cleanLine.toLowerCase().includes("grand total") || cleanLine.toLowerCase().includes("row labels")) return;
-
-                let lastSpaceIdx = cleanLine.lastIndexOf("\t");
-                if(lastSpaceIdx === -1) lastSpaceIdx = cleanLine.lastIndexOf("   ");
-                if(lastSpaceIdx === -1) lastSpaceIdx = cleanLine.lastIndexOf(" ");
-                
-                if(lastSpaceIdx === -1) return;
-
-                let rawBranchName = cleanLine.substring(0, lastSpaceIdx).trim();
-                let stockQty = cleanLine.substring(lastSpaceIdx).trim().replace(/٬/g, '');
-
-                if(!rawBranchName || !stockQty) return;
-
-                let sheetNameKey = rawBranchName.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-                let matchedBranch = cur.branchesList.find(b => {
-                    let sysNameKey = b.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    return sheetNameKey.includes(sysNameKey) || sysNameKey.includes(sheetNameKey);
-                });
-
-                if(matchedBranch) {
-                    cur.branchStock[matchedBranch] = stockQty;
-                    matchedCount++;
-                }
-            });
-
-            saveShiftToCloud();
-            renderBranches();
-            document.getElementById('paste-csv-area').value = '';
-            alert(`✅ تم بنجاح تحديث وربط ${matchedCount} فرع بالاستوك المطلوب للشفت الحالي!`);
-        }
-        window.importPastedStockData = importPastedStockData;
-
-        // --- ترتيـب الفروع (تحريك لأعلى ولأسفل) ---
+        // --- تحريك الفروع أعلى وأسفل مع الحفظ الفوري ---
         function moveBranchUp(index) {
             let cur = shiftData[activeShiftKey];
             if(index > 0) {
@@ -836,7 +772,7 @@
             tbody.innerHTML = '';
 
             if(cur.branchesList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">No branches in this shift. Add branches from Branches tab.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">No branches in this shift. Add branches from Branches tab.</td></tr>';
                 document.getElementById('stat-total').innerText = 0;
                 document.getElementById('stat-covered').innerText = 0;
                 document.getElementById('stat-conflicts').innerText = 0;
@@ -859,8 +795,6 @@
                 const isConflict = rep && rep !== "Without Rep" && repCounts[rep] > 1;
                 if(isConflict) conflictCount++;
 
-                const stockValue = cur.branchStock[branch] !== undefined ? `${cur.branchStock[branch]} pcs` : 'No Stock Data';
-
                 let optionsHTML = '<option value="">-- Select Representative --</option>';
                 optionsHTML += '<option value="Without Rep" ' + (rep === "Without Rep" ? 'selected' : '') + '>Without Rep</option>';
                 
@@ -870,10 +804,9 @@
                 });
 
                 tbody.innerHTML += `
-                    <tr class="branch-row" data-branch="${branch}" data-rep="${rep}" data-stock="${stockValue}">
+                    <tr class="branch-row" data-branch="${branch}" data-rep="${rep}">
                         <td>${idx + 1}</td>
                         <td><strong>${branch}</strong></td>
-                        <td><span class="stock-badge">📦 ${stockValue}</span></td>
                         <td>
                             <select class="${isConflict ? 'conflict' : ''}" onchange="updateAllocation('${branch}', this.value)">
                                 ${optionsHTML}
@@ -902,8 +835,7 @@
             rows.forEach(row => {
                 const branchName = row.getAttribute('data-branch').toLowerCase();
                 const repName = row.getAttribute('data-rep').toLowerCase();
-                const stockVal = row.getAttribute('data-stock').toLowerCase();
-                if(branchName.includes(query) || repName.includes(query) || stockVal.includes(query)) {
+                if(branchName.includes(query) || repName.includes(query)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -922,7 +854,7 @@
                 dateIso: todayIso, 
                 allocations: JSON.parse(JSON.stringify(cur.allocations)),
                 supports: JSON.parse(JSON.stringify(cur.supportsAllocation)),
-                branchStock: JSON.parse(JSON.stringify(cur.branchStock))
+                branchesList: JSON.parse(JSON.stringify(cur.branchesList))
             };
             
             const existingIndex = cur.dailyRecords.findIndex(r => r.dateIso === todayIso);
@@ -957,7 +889,7 @@
                     <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                         <div>
                             <h4 style="color: var(--pink); font-size: 16px; margin-bottom: 4px;">📅 Date: ${rec.dateStr}</h4>
-                            <p style="color: var(--text-muted); font-size: 13px;">Locked snapshot with branch allocations and stock quantities.</p>
+                            <p style="color: var(--text-muted); font-size: 13px;">Locked snapshot with branch allocations.</p>
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <button class="btn" style="padding: 8px 16px; font-size: 13px; width: auto;" onclick="viewRecordSnapshot(${originalIndex})">👁️ View</button>
@@ -980,17 +912,16 @@
             document.getElementById('modal-title').innerText = `Snapshot - ${rec.dateStr}`;
             
             let branchesHtml = '';
-            let bIdx = 1;
-            for(let branch in rec.allocations) {
+            let bList = rec.branchesList || Object.keys(rec.allocations);
+            bList.forEach((branch, i) => {
                 const rep = rec.allocations[branch] || 'Without Rep';
-                const stock = rec.branchStock?.[branch] ? `${rec.branchStock[branch]} pcs` : '-';
-                branchesHtml += `<tr><td>${bIdx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
-            }
+                branchesHtml += `<tr><td>${i + 1}</td><td>${branch}</td><td>${rep}</td></tr>`;
+            });
 
             const contentHtml = `
-                <h4 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations & Stock</h4>
+                <h4 style="font-size: 15px; color: #1e293b; margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations</h4>
                 <table class="export-table">
-                    <thead><tr><th>#</th><th>Branch Name</th><th>Stock</th><th>Representative</th></tr></thead>
+                    <thead><tr><th>#</th><th>Branch Name</th><th>Representative</th></tr></thead>
                     <tbody>${branchesHtml}</tbody>
                 </table>
             `;
@@ -1012,7 +943,7 @@
         window.deleteRecord = deleteRecord;
 
         function initAdminPanel() {
-            const adminRef = window.fbRef(window.fbDB, 'shifts_data/');
+            const adminRef = window.fbRef(window.fbDB, 'shifts_clean_data/');
             window.fbOnValue(adminRef, (snapshot) => {
                 const data = snapshot.val();
                 if(data) {
@@ -1047,7 +978,7 @@
             const newEn = document.getElementById(`admin-en-${key}`).checked;
             shiftData[key].pass = newPass;
             shiftData[key].enabled = newEn;
-            window.fbSet(window.fbRef(window.fbDB, `shifts_data/${key}/`), shiftData[key]);
+            window.fbSet(window.fbRef(window.fbDB, `shifts_clean_data/${key}/`), shiftData[key]);
             alert(`Shift ${key} updated successfully!`);
         }
         window.updateShiftConfig = updateShiftConfig;
@@ -1119,8 +1050,7 @@
                     let rep = rec.allocations[branch];
                     if(rep && rep !== "Without Rep") {
                         if(!repAssignments[rep]) repAssignments[rep] = [];
-                        let stock = rec.branchStock?.[branch] ? ` (${rec.branchStock[branch]} pcs)` : '';
-                        repAssignments[rep].push(`Branch: ${branch}${stock}`);
+                        repAssignments[rep].push(`Branch: ${branch}`);
                     }
                 }
                 selectedReps.forEach(repName => {
@@ -1128,7 +1058,7 @@
                     if(repAssignments[repName] && repAssignments[repName].length > 0) {
                         status = repAssignments[repName].join(" + ");
                     }
-                    reportRows.push({ "Date": rec.dateStr, "Representative Name": repName, "Daily Status / Location & Stock": status });
+                    reportRows.push({ "Date": rec.dateStr, "Representative Name": repName, "Daily Status / Location": status });
                 });
             });
 
@@ -1147,13 +1077,13 @@
             if(!expBranchesTbody) return;
             expBranchesTbody.innerHTML = '';
             let idx = 1;
-            for(let branch in cur.allocations) {
+            let bList = cur.branchesList || Object.keys(cur.allocations);
+            bList.forEach(branch => {
                 const rep = cur.allocations[branch];
                 if(rep) {
-                    const stock = cur.branchStock[branch] ? `${cur.branchStock[branch]} pcs` : '-';
-                    expBranchesTbody.innerHTML += `<tr><td>${idx++}</td><td>${branch}</td><td>${stock}</td><td>${rep}</td></tr>`;
+                    expBranchesTbody.innerHTML += `<tr><td>${idx++}</td><td>${branch}</td><td>${rep}</td></tr>`;
                 }
-            }
+            });
 
             ['snacks', 'chocolate', 'ambient'].forEach(cat => {
                 const ul = document.getElementById(`export-${cat}-ul`);
