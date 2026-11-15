@@ -329,11 +329,11 @@
 
                 <!-- SUPPORTS -->
                 <div style="margin-bottom: 32px;">
-                    <div class="section-title">🍫 Daily Support Allocation</div>
+                    <div class="section-title">Daily Support Allocation</div>
                     <div class="supports-grid">
                         <div class="support-box">
                             <div class="support-box-header">
-                                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 800;">🍿 Snacks Support</h4>
+                                <h4 style="color: #f59e0b; font-size: 15px; font-weight: 800;">Snacks Support</h4>
                                 <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('snacks')">+ Add Support</button>
                             </div>
                             <div class="support-items-list" id="snacks-list-container"></div>
@@ -341,7 +341,7 @@
 
                         <div class="support-box">
                             <div class="support-box-header">
-                                <h4 style="color: var(--pink); font-size: 15px; font-weight: 800;">🍫 Chocolate Support</h4>
+                                <h4 style="color: var(--pink); font-size: 15px; font-weight: 800;">Chocolate Support</h4>
                                 <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px; width: auto;" onclick="addSupportItem('chocolate')">+ Add Support</button>
                             </div>
                             <div class="support-items-list" id="chocolate-list-container"></div>
@@ -390,8 +390,8 @@
                             <tbody id="export-branches-tbody"></tbody>
                         </table>
                         <div class="export-supports-section">
-                            <div class="export-support-card"><h4>🍿 Snacks Support</h4><ul id="export-snacks-ul"></ul></div>
-                            <div class="export-support-card"><h4>🍫 Chocolate Support</h4><ul id="export-chocolate-ul"></ul></div>
+                            <div class="export-support-card"><h4>Snacks Support</h4><ul id="export-snacks-ul"></ul></div>
+                            <div class="export-support-card"><h4>Chocolate Support</h4><ul id="export-chocolate-ul"></ul></div>
                             <div class="export-support-card"><h4>Ambient Support OUT</h4><ul id="export-ambient-ul"></ul></div>
                         </div>
                     </div>
@@ -611,7 +611,7 @@
         }
 
         function startNewPlan() {
-            if(confirm("هل أنت متأكد من بدء بلان جديدة؟ سيتم تفريغ الفروع الحالية ولن يتم مسح السجلات القديمة.")) {
+            if(confirm("هل أنت متأكد من بدء بلان جديدة؟ سيتم تفريغ الفروع الحالية.")) {
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
@@ -908,7 +908,7 @@
             }
 
             saveShiftToCloud();
-            alert("تم حفظ بلان اليوم بنجاح ولن تضيع أبدًا وستبقى في السجلات!");
+            alert("تم حفظ بلان اليوم بنجاح!");
             renderRecords();
         }
         window.saveDailyRecord = saveDailyRecord;
