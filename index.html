@@ -474,7 +474,7 @@
 
         let adminPass = "darwin101";
         let isCloudDataLoaded = false;
-        let activePresenceRef = null;
+        let liveActiveUsers = {};
 
         function initGlobalMetaSync() {
             const metaRef = window.fbRef(window.fbDB, 'shifts_stable_v1_meta/');
@@ -492,11 +492,10 @@
             });
         }
 
-        // تتبع المتواجدين (Active Users Live Tracking)
         function initActiveUsersTracking() {
             const activeRef = window.fbRef(window.fbDB, 'shifts_stable_v1_active_users/');
             window.fbOnValue(activeRef, (snapshot) => {
-                window.liveActiveUsers = snapshot.val() || {};
+                liveActiveUsers = snapshot.val() || {};
                 if(document.getElementById('admin-container').style.display === 'flex') {
                     renderAdminTable();
                 }
@@ -544,9 +543,7 @@
                 document.getElementById('shift-title-display').innerText = globalShiftsMeta[activeShiftKey].title;
                 document.getElementById('export-title-header').innerText = `${globalShiftsMeta[activeShiftKey].title} - Schedule`;
                 
-                // تسجيل الوجود الحالي في هذا الشفت سحابياً
                 registerUserPresence(activeShiftKey);
-
                 initFirebaseSyncForShift();
             } else {
                 document.getElementById('login-err').style.display = 'block';
@@ -555,10 +552,14 @@
         window.checkLogin = checkLogin;
 
         function registerUserPresence(shiftKey) {
-            const sessionId = 'user_' + Math.random().toString(36.substring(2, 9));
-            activePresenceRef = window.fbRef(window.fbDB, `shifts_stable_v1_active_users/${shiftKey}/${sessionId}`);
-            window.fbSet(activePresenceRef, { loggedInAt: new Date().toLocaleTimeString() });
-            window.fbOnDisconnect(activePresenceRef).remove();
+            try {
+                const sessionId = 'user_' + Math.random().toString(36).substring(2, 9);
+                const presenceRef = window.fbRef(window.fbDB, `shifts_stable_v1_active_users/${shiftKey}/${sessionId}`);
+                window.fbSet(presenceRef, { onlineAt: new Date().toLocaleTimeString() });
+                window.fbOnDisconnect(presenceRef).remove();
+            } catch(e) {
+                console.error("Presence error:", e);
+            }
         }
 
         function initFirebaseSyncForShift() {
@@ -1000,8 +1001,7 @@
             ['morning', 'between', 'night'].forEach(key => {
                 let sh = globalShiftsMeta[key];
                 
-                // حساب عدد المتواجدين حالياً في هذا الشفت
-                let activeUsersObj = window.liveActiveUsers?.[key] || {};
+                let activeUsersObj = liveActiveUsers?.[key] || {};
                 let activeCount = Object.keys(activeUsersObj).length;
                 let activeBadge = activeCount > 0 
                     ? `<span style="background: rgba(16,185,129,0.15); color: var(--accent); border: 1px solid rgba(16,185,129,0.3); padding: 4px 12px; border-radius: 8px; font-weight: 800;">🟢 ${activeCount} Online</span>`
