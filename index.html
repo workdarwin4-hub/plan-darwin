@@ -153,7 +153,7 @@
         select:focus, input:focus { border-color: var(--pink); box-shadow: 0 0 0 2px rgba(236,72,153,0.2); }
 
         select.conflict { 
-            background: rgba(239, 68, 68, 0.3) !important; 
+            background: rgba(239, 68, 68, 0.35) !important; 
             border: 2px solid var(--danger) !important; 
             color: var(--text) !important;
             font-weight: 700;
@@ -259,7 +259,7 @@
             </div>
         </header>
         <main>
-            <div class="section-title">⚙️ Shift Passwords & Security Control (Live Active Users)</div>
+            <div class="section-title">⚙️ Shift Passwords & Security Control</div>
             <div class="table-responsive" style="margin-bottom: 32px;">
                 <table>
                     <thead>
@@ -267,16 +267,12 @@
                             <th>Shift Name</th>
                             <th>Current Password</th>
                             <th>Shift Status</th>
-                            <th>Currently Active Users Online</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="admin-shifts-tbody"></tbody>
                 </table>
             </div>
-
-            <div class="section-title">📂 Global Records Review Across All Shifts</div>
-            <div id="admin-records-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
         </main>
     </div>
 
@@ -473,7 +469,7 @@
         };
 
         let adminPass = "darwin101";
-        let isLocalChange = false; // لمنع تداخل التحديث اللحظي مع الكتابة المحلية
+        let isSyncing = false;
 
         function initGlobalMetaSync() {
             const metaRef = window.fbRef(window.fbDB, 'shifts_stable_v1_meta/');
@@ -523,18 +519,17 @@
                 document.getElementById('shift-title-display').innerText = globalShiftsMeta[activeShiftKey].title;
                 document.getElementById('export-title-header').innerText = `${globalShiftsMeta[activeShiftKey].title} - Schedule`;
                 
-                initFirebaseRealtimeSyncForShift();
+                initRealtimeSync();
             } else {
                 document.getElementById('login-err').style.display = 'block';
             }
         }
         window.checkLogin = checkLogin;
 
-        // ربط لحظي (Realtime onValue) عشان أي تغيير يظهر في نفس اللحظة على الموبايل والكمبيوتر
-        function initFirebaseRealtimeSyncForShift() {
+        function initRealtimeSync() {
             const dbRef = window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`);
             window.fbOnValue(dbRef, (snapshot) => {
-                if(isLocalChange) return; // تجاهل التحديث الذاتي أثناء الكتابة
+                if(isSyncing) return;
                 const data = snapshot.val();
                 if(data) {
                     if(data.branchesList !== undefined) shiftData[activeShiftKey].branchesList = data.branchesList;
@@ -549,10 +544,10 @@
             });
         }
 
-        function saveShiftToCloud() {
-            isLocalChange = true;
+        function saveToCloud() {
+            isSyncing = true;
             window.fbSet(window.fbRef(window.fbDB, `shifts_stable_v1_data/${activeShiftKey}/`), shiftData[activeShiftKey]).then(() => {
-                setTimeout(() => { isLocalChange = false; }, 400);
+                setTimeout(() => { isSyncing = false; }, 400);
             });
         }
 
@@ -580,7 +575,7 @@
                 let cur = shiftData[activeShiftKey];
                 cur.allocations = {};
                 cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
-                saveShiftToCloud();
+                saveToCloud();
                 renderSupportsUI();
                 renderBranches();
                 alert("تم تفريغ البلان بنجاح!");
@@ -594,7 +589,7 @@
                 let temp = cur.branchesList[index];
                 cur.branchesList[index] = cur.branchesList[index - 1];
                 cur.branchesList[index - 1] = temp;
-                saveShiftToCloud();
+                saveToCloud();
                 renderBranchesManagement();
                 renderBranches();
             }
@@ -607,7 +602,7 @@
                 let temp = cur.branchesList[index];
                 cur.branchesList[index] = cur.branchesList[index + 1];
                 cur.branchesList[index + 1] = temp;
-                saveShiftToCloud();
+                saveToCloud();
                 renderBranchesManagement();
                 renderBranches();
             }
@@ -642,7 +637,7 @@
             shiftData[activeShiftKey].teamMembers.push({ name, hr });
             document.getElementById('new-name').value = '';
             document.getElementById('new-hr').value = '';
-            saveShiftToCloud();
+            saveToCloud();
             renderDatabase();
             renderSupportsUI();
             renderBranches();
@@ -651,7 +646,7 @@
 
         function deleteMember(index) {
             shiftData[activeShiftKey].teamMembers.splice(index, 1);
-            saveShiftToCloud();
+            saveToCloud();
             renderDatabase();
             renderSupportsUI();
             renderBranches();
@@ -690,7 +685,7 @@
             if(!name) { alert('Please enter branch name'); return; }
             shiftData[activeShiftKey].branchesList.push(name);
             document.getElementById('new-branch-name').value = '';
-            saveShiftToCloud();
+            saveToCloud();
             renderBranchesManagement();
             renderBranches();
         }
@@ -698,7 +693,7 @@
 
         function deleteBranch(index) {
             shiftData[activeShiftKey].branchesList.splice(index, 1);
-            saveShiftToCloud();
+            saveToCloud();
             renderBranchesManagement();
             renderBranches();
         }
@@ -709,7 +704,7 @@
             if(!cur.supportsAllocation) cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
             if(!cur.supportsAllocation[category]) cur.supportsAllocation[category] = [];
             cur.supportsAllocation[category].push("");
-            saveShiftToCloud();
+            saveToCloud();
             renderSupportsUI();
         }
         window.addSupportItem = addSupportItem;
@@ -718,7 +713,7 @@
             let cur = shiftData[activeShiftKey];
             if(!cur.supportsAllocation) cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
             cur.supportsAllocation[category][index] = val;
-            saveShiftToCloud();
+            saveToCloud();
         }
         window.updateSupportItem = updateSupportItem;
 
@@ -726,7 +721,7 @@
             let cur = shiftData[activeShiftKey];
             if(!cur.supportsAllocation) cur.supportsAllocation = { snacks: [], chocolate: [], ambient: [] };
             cur.supportsAllocation[category].splice(index, 1);
-            saveShiftToCloud();
+            saveToCloud();
             renderSupportsUI();
         }
         window.removeSupportItem = removeSupportItem;
@@ -833,7 +828,7 @@
             } else {
                 shiftData[activeShiftKey].allocations[branch] = value;
             }
-            saveShiftToCloud();
+            saveToCloud();
             renderBranches();
         }
         window.updateAllocation = updateAllocation;
@@ -874,8 +869,8 @@
                 cur.dailyRecords.unshift(recordObj);
             }
 
-            saveShiftToCloud();
-            alert("تم حفظ بلان اليوم بنجاح ولن تضيع أبدًا وستبقى في السجلات!");
+            saveToCloud();
+            alert("تم حفظ بلان اليوم بنجاح!");
             renderRecords();
         }
         window.saveDailyRecord = saveDailyRecord;
@@ -957,7 +952,7 @@
         function deleteRecord(idx) {
             if(confirm("Are you sure you want to delete this specific record?")) {
                 shiftData[activeShiftKey].dailyRecords.splice(idx, 1);
-                saveShiftToCloud();
+                saveToCloud();
                 renderRecords();
             }
         }
@@ -965,7 +960,6 @@
 
         function initAdminPanel() {
             renderAdminTable();
-            renderAdminRecords();
         }
 
         function renderAdminTable() {
@@ -979,7 +973,6 @@
                         <td><strong>${sh.title}</strong> (${key})</td>
                         <td><input type="text" id="admin-pass-${key}" value="${sh.pass}" style="width: 150px;"></td>
                         <td><input type="checkbox" id="admin-en-${key}" ${sh.enabled ? 'checked' : ''} style="width: 20px; height: 20px;"> Enabled</td>
-                        <td><span style="color: var(--accent);">🟢 Active Cloud</span></td>
                         <td><button class="btn btn-success" style="padding: 6px 14px; font-size: 12px; width: auto;" onclick="updateShiftConfig('${key}')">Save Changes</button></td>
                     </tr>
                 `;
@@ -997,25 +990,6 @@
             });
         }
         window.updateShiftConfig = updateShiftConfig;
-
-        function renderAdminRecords() {
-            const container = document.getElementById('admin-records-container');
-            if(!container) return;
-            container.innerHTML = '';
-            
-            ['morning', 'between', 'night'].forEach(key => {
-                let sh = globalShiftsMeta[key];
-                container.innerHTML += `
-                    <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h4 style="color: var(--secondary); font-size: 16px; margin-bottom: 4px;">${sh.title} (${key})</h4>
-                            <p style="color: var(--text-muted); font-size: 13px;">Status: ${sh.enabled ? 'Active' : 'Disabled'}</p>
-                        </div>
-                        <span class="stock-badge">Password: ${sh.pass}</span>
-                    </div>
-                `;
-            });
-        }
 
         function openReportModal() {
             let cur = shiftData[activeShiftKey];
