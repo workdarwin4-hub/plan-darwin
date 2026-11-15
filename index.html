@@ -569,11 +569,15 @@
                 if(data) {
                     if(data.branchesList !== undefined) shiftData[activeShiftKey].branchesList = data.branchesList;
                     if(data.teamMembers) shiftData[activeShiftKey].teamMembers = data.teamMembers;
-                    if(data.allocations) shiftData[activeShiftKey].allocations = data.allocations;
-                    if(data.supportsAllocation) shiftData[activeShiftKey].supportsAllocation = data.supportsAllocation;
                     
-                    // حماية قوية جداً للسجلات: لا يتم تحديث السجلات بداتا فارغة أبداً للحفاظ على البيانات القديمة
-                    if(data.dailyRecords && Array.isArray(data.dailyRecords) && data.dailyRecords.length > 0) {
+                    // قراءة التوزيعات المعتمدة وثباتها بدون مسحها مع الـ Refresh
+                    if(data.allocations !== undefined) {
+                        shiftData[activeShiftKey].allocations = data.allocations || {};
+                    }
+                    if(data.supportsAllocation !== undefined) {
+                        shiftData[activeShiftKey].supportsAllocation = data.supportsAllocation || { snacks: [], chocolate: [], ambient: [] };
+                    }
+                    if(data.dailyRecords && Array.isArray(data.dailyRecords)) {
                         shiftData[activeShiftKey].dailyRecords = data.dailyRecords;
                     }
                 } else {
@@ -901,6 +905,7 @@
                 branchesList: JSON.parse(JSON.stringify(cur.branchesList))
             };
             
+            if(!cur.dailyRecords) cur.dailyRecords = [];
             const existingIndex = cur.dailyRecords.findIndex(r => r.dateIso === todayIso);
             if(existingIndex >= 0) {
                 cur.dailyRecords[existingIndex] = recordObj;
@@ -909,7 +914,7 @@
             }
 
             saveShiftToCloud();
-            alert("Today's plan successfully saved to Records and protected!");
+            alert("Today's plan successfully saved to Records!");
         }
         window.saveDailyRecord = saveDailyRecord;
 
@@ -919,8 +924,9 @@
             if(!container) return;
             container.innerHTML = '';
             
+            const recordsList = cur.dailyRecords || [];
             const query = (document.getElementById('record-search-input')?.value || '').toLowerCase();
-            const filteredRecords = cur.dailyRecords.filter(rec => rec.dateStr.toLowerCase().includes(query) || rec.dateIso.includes(query));
+            const filteredRecords = recordsList.filter(rec => rec.dateStr.toLowerCase().includes(query) || rec.dateIso.includes(query));
 
             if(filteredRecords.length === 0) {
                 container.innerHTML = '<p style="color: var(--text-muted);">No matching records found.</p>';
@@ -928,7 +934,7 @@
             }
 
             filteredRecords.forEach((rec, idx) => {
-                const originalIndex = cur.dailyRecords.indexOf(rec);
+                const originalIndex = recordsList.indexOf(rec);
                 container.innerHTML += `
                     <div style="background: var(--card-bg); border: 1px solid var(--border); padding: 20px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                         <div>
@@ -1094,7 +1100,7 @@
             const checkboxes = document.querySelectorAll('input[name="report-rep-checkbox"]:checked');
             let selectedReps = Array.from(checkboxes).map(cb => cb.value);
             if(selectedReps.length === 0) { selectedReps = cur.teamMembers.map(m => m.name); }
-            if(cur.dailyRecords.length === 0) { alert("No saved records available."); return; }
+            if(!cur.dailyRecords || cur.dailyRecords.length === 0) { alert("No saved records available."); return; }
 
             let reportRows = [];
             cur.dailyRecords.forEach(rec => {
