@@ -914,9 +914,50 @@
         window.filterRecords = filterRecords;
 
         function viewRecordSnapshot(idx) {
-            let cur = shiftData[activeShiftKey];
-            const rec = cur.dailyRecords[idx];
-            document.getElementById('modal-title').innerText = `Snapshot - ${rec.dateStr}`;
+    let cur = shiftData[activeShiftKey];
+    if (!cur.dailyRecords || !cur.dailyRecords[idx]) {
+        alert("عذراً، السجل غير موجود.");
+        return;
+    }
+    const rec = cur.dailyRecords[idx];
+    document.getElementById('modal-title').innerText = `Snapshot - ${rec.dateStr}`;
+    
+    let branchesHtml = '';
+    let bList = rec.branchesList || Object.keys(rec.allocations || {});
+    let validIdx = 1;
+    
+    bList.forEach((branch) => {
+        const rep = rec.allocations ? rec.allocations[branch] : null;
+        if(rep) {
+            branchesHtml += `<tr><td>${validIdx++}</td><td>${branch}</td><td>${rep}</td></tr>`;
+        }
+    });
+
+    if(!branchesHtml) {
+        branchesHtml = '<tr><td colspan="3" style="text-align:center;">No branches assigned in this record.</td></tr>';
+    }
+
+    const contentHtml = `
+        <h4 style="font-size: 15px; color: var(--text); margin-bottom: 8px; font-weight: 800;">📌 Branch Allocations</h4>
+        <table class="export-table">
+            <thead><tr><th>#</th><th>Branch Name</th><th>Dispatcher</th></tr></thead>
+            <tbody>${branchesHtml}</tbody>
+        </table>
+    `;
+    document.getElementById('modal-body-content').innerHTML = contentHtml;
+    document.getElementById('modal-overlay').style.display = 'flex';
+}
+window.viewRecordSnapshot = viewRecordSnapshot;
+
+function closeModal(e) { 
+    document.getElementById('modal-overlay').style.display = 'none'; 
+}
+window.closeModal = closeModal;
+
+function closeModalForce() { 
+    document.getElementById('modal-overlay').style.display = 'none'; 
+}
+window.closeModalForce = closeModalForce;
             
             let branchesHtml = '';
             let bList = rec.branchesList || Object.keys(rec.allocations);
