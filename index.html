@@ -980,7 +980,6 @@
                 branchesHtml = '<tr><td colspan="3" style="text-align:center;">No branches assigned in this record.</td></tr>';
             }
 
-            // Supports strings inside snapshot
             let snacksList = rec.supports?.snacks || [];
             let chocoList = rec.supports?.chocolate || [];
             let ambientList = rec.supports?.ambient || [];
@@ -1004,7 +1003,6 @@
             `;
             document.getElementById('modal-body-content').innerHTML = contentHtml;
             
-            // ربط زرار التحميل داخل الـ Modal
             document.getElementById('modal-download-btn').onclick = function() {
                 downloadSnapshotExcel(rec);
             };
@@ -1175,7 +1173,6 @@
             let cur = shiftData[activeShiftKey];
             const expBranchesTbody = document.getElementById('export-branches-tbody');
             if(!expBranchesTbody) return;
-            exp_branches_tbody = '';
             let idx = 1;
             let bList = cur.branchesList || [];
             let hasExportable = false;
